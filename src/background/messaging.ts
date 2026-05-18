@@ -48,6 +48,7 @@ function summarize(session: Session): SessionSummary {
     type: session.type,
     color: session.color,
     cookieCount: session.jar.cookieCount(),
+    domains: session.jar.cookieDomains(),
   };
 }
 
@@ -60,7 +61,7 @@ const handlers: Record<string, Handler> = {
     return summarize(session);
   },
 
-  deleteSession: (store, msg) => {
+  deleteSession: async (store, msg) => {
     if (msg.type !== "deleteSession") return;
     const id = msg.payload.id;
     const orphanTabs: number[] = [];
@@ -68,7 +69,13 @@ const handlers: Record<string, Handler> = {
       if (sid === id) orphanTabs.push(tabId);
     }
     store.remove(id);
-    for (const tabId of orphanTabs) applyTabIcon(store, tabId);
+    if (orphanTabs.length > 0) {
+      try {
+        await browser.tabs.remove(orphanTabs);
+      } catch {
+        // tab(s) already closed
+      }
+    }
     return { ok: true };
   },
 

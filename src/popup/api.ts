@@ -6,6 +6,7 @@ export interface SessionSummary {
   type: "temp" | "stored";
   color: string;
   cookieCount: number;
+  domains: string[];
 }
 
 export interface Settings {

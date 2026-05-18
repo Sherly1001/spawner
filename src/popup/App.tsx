@@ -6,6 +6,7 @@ import {
   FaPlus,
   FaReply,
   FaTimes,
+  FaTrash,
   FaUndo,
 } from "react-icons/fa";
 import * as api from "./api";
@@ -31,6 +32,15 @@ function normalizeUrl(input: string | undefined, fallback?: string): string {
   if (!value) return fallback || "about:blank";
   if (/^(https?|file|about):/i.test(value)) return value;
   return "https://" + value;
+}
+
+const UNASSIGNED = "(no cookies)";
+
+type DeleteScope = "temp" | "stored" | "both";
+
+interface GroupDeleteState {
+  host: string;
+  scope: DeleteScope;
 }
 
 interface DialogState {
@@ -60,6 +70,7 @@ export default function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [colorPickerId, setColorPickerId] = useState<string | null>(null);
+  const [groupDelete, setGroupDelete] = useState<GroupDeleteState | null>(null);
 
   const refresh = useCallback(async () => {
     const [list, currentSession, tab] = await Promise.all([
@@ -157,6 +168,59 @@ export default function App() {
     refresh();
   };
 
+  const groups = (() => {
+    const map = new Map<string, SessionSummary[]>();
+    for (const s of sessions) {
+      const keys = s.domains.length > 0 ? s.domains : [UNASSIGNED];
+      for (const k of keys) {
+        const arr = map.get(k);
+        if (arr) arr.push(s);
+        else map.set(k, [s]);
+      }
+    }
+    return [...map.entries()].sort(([a], [b]) => {
+      if (a === UNASSIGNED) return -1;
+      if (b === UNASSIGNED) return 1;
+      return a.localeCompare(b);
+    });
+  })();
+
+  const confirmGroupDelete = () => {
+    if (!groupDelete) return;
+    const { host, scope } = groupDelete;
+    const matches = sessions.filter((s) => {
+      if (host === UNASSIGNED) {
+        if (s.domains.length !== 0) return false;
+      } else if (!s.domains.includes(host)) {
+        return false;
+      }
+      if (scope === "both") return true;
+      return s.type === scope;
+    });
+    setGroupDelete(null);
+    if (matches.length === 0) {
+      setDialog({
+        title: "No matches",
+        message: `No ${scope === "both" ? "" : scope + " "}sessions to delete in "${host}".`,
+        confirmLabel: "OK",
+        onConfirm: () => setDialog(null),
+      });
+      return;
+    }
+    const names = matches.map((m) => m.name).join(", ");
+    setDialog({
+      title: `Delete ${matches.length} session${matches.length === 1 ? "" : "s"}`,
+      message: `Remove ${scope === "both" ? "all" : scope} session${matches.length === 1 ? "" : "s"} in "${host}"? (${names})`,
+      confirmLabel: "Delete",
+      tone: "danger",
+      onConfirm: async () => {
+        setDialog(null);
+        await Promise.all(matches.map((m) => api.deleteSession(m.id)));
+        refresh();
+      },
+    });
+  };
+
   return (
     <div className="app">
       <header>
@@ -222,105 +286,130 @@ export default function App() {
             </button>
           </section>
 
-          <ul className="sessions">
+          <div className="groups">
             {sessions.length === 0 && (
-              <li className="empty">No sessions yet. Create one above.</li>
+              <div className="empty">No sessions yet. Create one above.</div>
             )}
-            {sessions.map((s) => (
-              <li key={s.id} className="session">
-                <div className="row1">
-                  <span className="dot-wrap">
-                    <button
-                      type="button"
-                      className="dot dot-btn"
-                      style={{ background: s.color }}
-                      title="Change color"
-                      onClick={() =>
-                        setColorPickerId(colorPickerId === s.id ? null : s.id)
-                      }
-                    />
-                    {colorPickerId === s.id && (
-                      <div
-                        className="color-popover"
-                        onMouseLeave={() => setColorPickerId(null)}
-                      >
-                        {COLORS.map((c) => (
+            {groups.map(([host, items]) => (
+              <div key={host} className="group">
+                <div className="group-head">
+                  <span className="host" title={host}>
+                    {host}
+                  </span>
+                  <span className="count" title="sessions">
+                    {items.length}
+                  </span>
+                  <button
+                    className="icon-btn del"
+                    title={`Delete sessions in ${host}`}
+                    onClick={() => setGroupDelete({ host, scope: "temp" })}
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+                <ul className="sessions">
+                  {items.map((s) => (
+                    <li key={s.id} className="session">
+                      <div className="row1">
+                        <span className="dot-wrap">
                           <button
-                            key={c}
                             type="button"
-                            className={
-                              "swatch" + (c === s.color ? " active" : "")
+                            className="dot dot-btn"
+                            style={{ background: s.color }}
+                            title="Change color"
+                            onClick={() =>
+                              setColorPickerId(
+                                colorPickerId === s.id ? null : s.id,
+                              )
                             }
-                            style={{ background: c }}
-                            title={c}
-                            onClick={() => handleColorChange(s.id, c)}
                           />
-                        ))}
+                          {colorPickerId === s.id && (
+                            <div
+                              className="color-popover"
+                              onMouseLeave={() => setColorPickerId(null)}
+                            >
+                              {COLORS.map((c) => (
+                                <button
+                                  key={c}
+                                  type="button"
+                                  className={
+                                    "swatch" + (c === s.color ? " active" : "")
+                                  }
+                                  style={{ background: c }}
+                                  title={c}
+                                  onClick={() => handleColorChange(s.id, c)}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </span>
+                        {editingId === s.id ? (
+                          <input
+                            className="name-edit"
+                            autoFocus
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") commitEdit();
+                              else if (e.key === "Escape") cancelEdit();
+                            }}
+                            onBlur={commitEdit}
+                          />
+                        ) : (
+                          <span
+                            className="name"
+                            title="Click to rename"
+                            onClick={() => startEdit(s)}
+                          >
+                            {s.name}
+                          </span>
+                        )}
+                        <span className={`pill ${s.type}`}>{s.type}</span>
+                        <span className="count" title="cookies">
+                          {s.cookieCount}
+                        </span>
                       </div>
-                    )}
-                  </span>
-                  {editingId === s.id ? (
-                    <input
-                      className="name-edit"
-                      autoFocus
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") commitEdit();
-                        else if (e.key === "Escape") cancelEdit();
-                      }}
-                      onBlur={commitEdit}
-                    />
-                  ) : (
-                    <span
-                      className="name"
-                      title="Click to rename"
-                      onClick={() => startEdit(s)}
-                    >
-                      {s.name}
-                    </span>
-                  )}
-                  <span className={`pill ${s.type}`}>{s.type}</span>
-                  <span className="count" title="cookies">
-                    {s.cookieCount}
-                  </span>
-                </div>
-                <div className="row2">
-                  <input
-                    placeholder={activeTab?.url || "https://example.com"}
-                    value={urlMap[s.id] || ""}
-                    onChange={(e) =>
-                      setUrlMap({ ...urlMap, [s.id]: e.target.value })
-                    }
-                    onKeyDown={(e) => e.key === "Enter" && handleOpen(s.id)}
-                  />
-                  <button onClick={() => handleOpen(s.id)}>Open</button>
-                  {current?.id !== s.id && (
-                    <button
-                      title="Assign current tab to this session"
-                      onClick={() => handleAssign(s.id)}
-                    >
-                      <FaReply />
-                    </button>
-                  )}
-                  <button
-                    className="ghost"
-                    title="Clear cookies"
-                    onClick={() => handleClear(s.id)}
-                  >
-                    <FaUndo />
-                  </button>
-                  <button
-                    className="del"
-                    title="Delete"
-                    onClick={() => handleDelete(s.id)}
-                  >
-                    <FaTimes />
-                  </button>
-                </div>
-              </li>
+                      <div className="row2">
+                        <input
+                          placeholder={activeTab?.url || "https://example.com"}
+                          value={urlMap[s.id] || ""}
+                          onChange={(e) =>
+                            setUrlMap({ ...urlMap, [s.id]: e.target.value })
+                          }
+                          onKeyDown={(e) =>
+                            e.key === "Enter" && handleOpen(s.id)
+                          }
+                        />
+                        <button onClick={() => handleOpen(s.id)}>Open</button>
+                        {current?.id !== s.id && (
+                          <button
+                            title="Assign current tab to this session"
+                            onClick={() => handleAssign(s.id)}
+                          >
+                            <FaReply />
+                          </button>
+                        )}
+                        <button
+                          className="ghost"
+                          title="Clear cookies"
+                          onClick={() => handleClear(s.id)}
+                        >
+                          <FaUndo />
+                        </button>
+                        <button
+                          className="del"
+                          title="Delete"
+                          onClick={() => handleDelete(s.id)}
+                        >
+                          <FaTimes />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         </>
       )}
 
@@ -334,6 +423,46 @@ export default function App() {
         onConfirm={dialog?.onConfirm}
         onCancel={() => setDialog(null)}
       />
+
+      {groupDelete && (
+        <div
+          className="dlg-backdrop"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setGroupDelete(null);
+          }}
+        >
+          <div className="dlg" role="dialog" aria-modal="true">
+            <h2 className="dlg-title">Delete sessions in {groupDelete.host}</h2>
+            <div className="dlg-radio-group">
+              {(["temp", "stored", "both"] as DeleteScope[]).map((opt) => (
+                <label key={opt} className="dlg-radio">
+                  <input
+                    type="radio"
+                    name="scope"
+                    checked={groupDelete.scope === opt}
+                    onChange={() =>
+                      setGroupDelete({ ...groupDelete, scope: opt })
+                    }
+                  />
+                  <span>
+                    {opt === "both"
+                      ? "Both"
+                      : opt === "temp"
+                        ? "Temp only"
+                        : "Stored only"}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <div className="dlg-actions">
+              <button onClick={() => setGroupDelete(null)}>Cancel</button>
+              <button className="danger" onClick={confirmGroupDelete}>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

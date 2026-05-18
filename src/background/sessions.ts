@@ -135,13 +135,7 @@ export class SessionStore {
   list(): SessionSummary[] {
     const out: SessionSummary[] = [];
     for (const s of this.sessions.values()) {
-      out.push({
-        id: s.id,
-        name: s.name,
-        type: s.type,
-        color: s.color,
-        cookieCount: s.jar.cookieCount(),
-      });
+      out.push(this.summarize(s));
     }
     return out;
   }
@@ -153,6 +147,7 @@ export class SessionStore {
       type: session.type,
       color: session.color,
       cookieCount: session.jar.cookieCount(),
+      domains: session.jar.cookieDomains(),
     };
   }
 

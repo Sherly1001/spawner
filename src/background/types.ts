@@ -16,6 +16,7 @@ export interface SessionSummary {
   type: SessionType;
   color: string;
   cookieCount: number;
+  domains: string[];
 }
 
 export interface Settings {
