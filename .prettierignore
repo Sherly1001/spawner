@@ -1,0 +1,5 @@
+node_modules
+popup-dist
+dist
+pnpm-lock.yaml
+.wolf
