@@ -2,11 +2,11 @@
 // If yes, injects helper.js into page world to override document.cookie.
 // Also manages optional tab-title prefix.
 (function () {
-  var api = typeof browser !== "undefined" ? browser : chrome;
+  const api = typeof browser !== "undefined" ? browser : chrome;
 
-  var prefix = "";
-  var lastSetByUs = "";
-  var titleObserver = null;
+  let prefix = "";
+  let lastSetByUs = "";
+  let titleObserver = null;
 
   function computePrefix(sessionName) {
     return sessionName ? "[" + sessionName + "] " : "";
@@ -14,11 +14,11 @@
 
   function applyPrefix() {
     if (!prefix) return;
-    var t = document.title || "";
+    const t = document.title || "";
     if (t === lastSetByUs) return;
     if (t.indexOf(prefix) === 0) return;
-    var bare = stripAnyPrefix(t);
-    var next = prefix + bare;
+    const bare = stripAnyPrefix(t);
+    const next = prefix + bare;
     lastSetByUs = next;
     document.title = next;
   }
@@ -34,7 +34,7 @@
       titleObserver = null;
     }
     if (!prefix) return;
-    var t = document.title || "";
+    const t = document.title || "";
     if (t.indexOf(prefix) === 0) {
       lastSetByUs = "";
       document.title = t.slice(prefix.length);
@@ -44,7 +44,7 @@
 
   function startTitleObserver() {
     if (titleObserver) return;
-    var head = document.head || document.documentElement;
+    const head = document.head || document.documentElement;
     if (!head) return;
     titleObserver = new MutationObserver(function () {
       applyPrefix();
@@ -59,7 +59,7 @@
 
   function setupPrefix(enabled, sessionName) {
     if (enabled && sessionName) {
-      var next = computePrefix(sessionName);
+      const next = computePrefix(sessionName);
       if (next !== prefix) {
         // session renamed or just enabled
         clearPrefix();
@@ -80,11 +80,11 @@
   api.runtime.sendMessage({ type: "isVirtualSession" }, function (resp) {
     if (!resp || !resp.virtual) return;
 
-    var script = document.createElement("script");
+    const script = document.createElement("script");
     script.src = api.runtime.getURL("src/content/helper.js");
     script.setAttribute("data-spawner-init", resp.init || "");
     script.setAttribute("data-spawner-script", "true");
-    var parent = document.head || document.documentElement;
+    const parent = document.head || document.documentElement;
     parent.appendChild(script);
     script.parentNode && script.parentNode.removeChild(script);
 
@@ -93,7 +93,7 @@
     window.addEventListener("message", function (event) {
       if (event.source !== window) return;
       if (typeof event.data !== "string") return;
-      var data;
+      let data;
       try {
         data = JSON.parse(event.data);
       } catch (e) {
