@@ -1,20 +1,22 @@
 // Injected into page world (web_accessible_resources). Overrides document.cookie
 // so site JS sees the per-session jar instead of the browser's real cookies.
 (function () {
-  const tag = document.querySelector('script[data-spawner-script="true"]');
+  const tag = document.querySelector(
+    'script[data-spawner-script="true"]',
+  ) as HTMLScriptElement | null;
   let cookie = tag ? tag.getAttribute("data-spawner-init") || "" : "";
   if (tag) {
     tag.removeAttribute("data-spawner-init");
     tag.removeAttribute("data-spawner-script");
   }
 
-  window.addEventListener("message", function (event) {
+  window.addEventListener("message", (event) => {
     if (event.source !== window) return;
     if (typeof event.data !== "string") return;
-    let data;
+    let data: { type?: string; cookie?: string } | null;
     try {
       data = JSON.parse(event.data);
-    } catch (e) {
+    } catch {
       return;
     }
     if (data && data.type === "SPAWNER_COOKIE_PUSH") {
@@ -25,10 +27,10 @@
   try {
     Object.defineProperty(document, "cookie", {
       configurable: true,
-      get: function () {
+      get(): string {
         return cookie;
       },
-      set: function (value) {
+      set(value: unknown): void {
         if (value == null) return;
         const str = String(value);
         try {
@@ -40,9 +42,7 @@
           const parts = cookie
             ? cookie
                 .split(";")
-                .map(function (s) {
-                  return s.trim();
-                })
+                .map((s) => s.trim())
                 .filter(Boolean)
             : [];
           let found = false;
@@ -54,15 +54,12 @@
           }
           if (!found) parts.push(name + "=" + val);
           cookie = parts.join("; ");
-        } catch (e) {}
+        } catch {}
         window.postMessage(
-          JSON.stringify({
-            type: "SPAWNER_COOKIE_SET",
-            cookie: str,
-          }),
+          JSON.stringify({ type: "SPAWNER_COOKIE_SET", cookie: str }),
           location.href,
         );
       },
     });
-  } catch (e) {}
+  } catch {}
 })();

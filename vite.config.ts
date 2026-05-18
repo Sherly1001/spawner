@@ -3,12 +3,15 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 /**
- * Two build targets share this config, selected via `--mode background`:
- *   - default: bundles the React popup from `index.html` into `dist/`
- *   - background: bundles `src/background/main.ts` into `dist/background.js`
+ * Build targets, selected via `--mode`:
+ *   - default (popup): bundles the React popup from `index.html` into `dist/`
+ *   - background:      bundles `src/background/main.ts` → `dist/background.js`
+ *   - content:         bundles `src/content/virtual-session.ts` → `dist/content/virtual-session.js`
+ *   - helper:          bundles `src/content/helper.ts` → `dist/content/helper.js`
  *
- * The background target must emit a classic script (IIFE) because MV2
- * persistent background pages do not support ES modules.
+ * Background and content scripts must emit classic IIFE scripts: MV2 background
+ * pages do not support ESM, and content scripts run in the page context without
+ * a module loader.
  */
 export default defineConfig(({ mode }) => {
   if (mode === "background") {
@@ -23,9 +26,41 @@ export default defineConfig(({ mode }) => {
           formats: ["iife"],
           fileName: () => "background.js",
         },
-        rollupOptions: {
-          output: { extend: true },
+        rollupOptions: { output: { extend: true } },
+      },
+    };
+  }
+
+  if (mode === "content") {
+    return {
+      build: {
+        outDir: "dist/content",
+        emptyOutDir: false,
+        target: "es2020",
+        lib: {
+          entry: resolve(__dirname, "src/content/virtual-session.ts"),
+          name: "SpawnerContent",
+          formats: ["iife"],
+          fileName: () => "virtual-session.js",
         },
+        rollupOptions: { output: { extend: true } },
+      },
+    };
+  }
+
+  if (mode === "helper") {
+    return {
+      build: {
+        outDir: "dist/content",
+        emptyOutDir: false,
+        target: "es2020",
+        lib: {
+          entry: resolve(__dirname, "src/content/helper.ts"),
+          name: "SpawnerHelper",
+          formats: ["iife"],
+          fileName: () => "helper.js",
+        },
+        rollupOptions: { output: { extend: true } },
       },
     };
   }

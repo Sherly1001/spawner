@@ -7,7 +7,9 @@
     "dev": "vite",
     "build:popup": "vite build",
     "build:background": "vite build --mode background",
-    "build": "pnpm build:popup && pnpm build:background",
+    "build:content": "vite build --mode content",
+    "build:helper": "vite build --mode helper",
+    "build": "pnpm build:popup && pnpm build:background && pnpm build:content && pnpm build:helper",
     "format": "prettier -w .",
     "typecheck": "tsc --noEmit"
   },
