@@ -40,7 +40,15 @@ header .sub {
   align-items: center;
   justify-content: space-between;
 }
+.title-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: 1px solid transparent;
   width: 26px;
@@ -50,6 +58,7 @@ header .sub {
   font-size: 14px;
   cursor: pointer;
   color: #4b5563;
+  text-decoration: none;
 }
 .icon-btn:hover {
   background: #f1f3f7;

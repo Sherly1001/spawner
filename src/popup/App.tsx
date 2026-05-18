@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  FiArrowLeft,
-  FiCornerUpLeft,
-  FiPlus,
-  FiRotateCcw,
-  FiSettings,
-  FiX,
-} from "react-icons/fi";
+  FaArrowLeft,
+  FaCog,
+  FaGithub,
+  FaPlus,
+  FaReply,
+  FaTimes,
+  FaUndo,
+} from "react-icons/fa";
 import * as api from "./api";
 import type { SessionSummary } from "./api";
 import Dialog, { type DialogTone } from "./Dialog";
@@ -161,15 +162,26 @@ export default function App() {
       <header>
         <div className="title-row">
           <h1>Spawner</h1>
-          <button
-            className="icon-btn"
-            title={view === "sessions" ? "Settings" : "Back to sessions"}
-            onClick={() =>
-              setView(view === "sessions" ? "settings" : "sessions")
-            }
-          >
-            {view === "sessions" ? <FiSettings /> : <FiArrowLeft />}
-          </button>
+          <div className="title-actions">
+            <button
+              className="icon-btn"
+              title={view === "sessions" ? "Settings" : "Back to sessions"}
+              onClick={() =>
+                setView(view === "sessions" ? "settings" : "sessions")
+              }
+            >
+              {view === "sessions" ? <FaCog /> : <FaArrowLeft />}
+            </button>
+            <a
+              className="icon-btn"
+              href="https://github.com/Sherly1001/spawner"
+              target="_blank"
+              rel="noreferrer noopener"
+              title="GitHub repository"
+            >
+              <FaGithub />
+            </a>
+          </div>
         </div>
         {view === "sessions" && (
           <p className="sub">Multi-login sessions in normal tabs.</p>
@@ -203,10 +215,10 @@ export default function App() {
               onChange={(e) => setName(e.target.value)}
             />
             <button className="primary" onClick={() => handleCreate("temp")}>
-              <FiPlus /> Temp
+              <FaPlus /> Temp
             </button>
             <button className="primary" onClick={() => handleCreate("stored")}>
-              <FiPlus /> Stored
+              <FaPlus /> Stored
             </button>
           </section>
 
@@ -288,7 +300,7 @@ export default function App() {
                       title="Assign current tab to this session"
                       onClick={() => handleAssign(s.id)}
                     >
-                      <FiCornerUpLeft />
+                      <FaReply />
                     </button>
                   )}
                   <button
@@ -296,14 +308,14 @@ export default function App() {
                     title="Clear cookies"
                     onClick={() => handleClear(s.id)}
                   >
-                    <FiRotateCcw />
+                    <FaUndo />
                   </button>
                   <button
                     className="del"
                     title="Delete"
                     onClick={() => handleDelete(s.id)}
                   >
-                    <FiX />
+                    <FaTimes />
                   </button>
                 </div>
               </li>
