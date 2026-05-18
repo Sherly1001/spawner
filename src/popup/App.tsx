@@ -1,4 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
+import {
+  FiArrowLeft,
+  FiCornerUpLeft,
+  FiPlus,
+  FiRotateCcw,
+  FiSettings,
+  FiX,
+} from "react-icons/fi";
 import * as api from "./api";
 import type { SessionSummary } from "./api";
 import Dialog, { type DialogTone } from "./Dialog";
@@ -160,7 +168,7 @@ export default function App() {
               setView(view === "sessions" ? "settings" : "sessions")
             }
           >
-            {view === "sessions" ? "⚙" : "←"}
+            {view === "sessions" ? <FiSettings /> : <FiArrowLeft />}
           </button>
         </div>
         {view === "sessions" && (
@@ -195,10 +203,10 @@ export default function App() {
               onChange={(e) => setName(e.target.value)}
             />
             <button className="primary" onClick={() => handleCreate("temp")}>
-              + Temp
+              <FiPlus /> Temp
             </button>
             <button className="primary" onClick={() => handleCreate("stored")}>
-              + Stored
+              <FiPlus /> Stored
             </button>
           </section>
 
@@ -280,7 +288,7 @@ export default function App() {
                       title="Assign current tab to this session"
                       onClick={() => handleAssign(s.id)}
                     >
-                      ↪
+                      <FiCornerUpLeft />
                     </button>
                   )}
                   <button
@@ -288,14 +296,14 @@ export default function App() {
                     title="Clear cookies"
                     onClick={() => handleClear(s.id)}
                   >
-                    ⟲
+                    <FiRotateCcw />
                   </button>
                   <button
                     className="del"
                     title="Delete"
                     onClick={() => handleDelete(s.id)}
                   >
-                    ×
+                    <FiX />
                   </button>
                 </div>
               </li>
