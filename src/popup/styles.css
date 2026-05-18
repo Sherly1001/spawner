@@ -156,27 +156,23 @@ button:disabled {
 .group-head .icon-btn.del {
   color: #b91c1c;
 }
-.group-head .icon-btn.del:hover {
+.group-head .icon-btn.del:hover:not(:disabled) {
   background: #fee2e2;
   border-color: #fecaca;
 }
-
-.dlg-radio-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0 0 12px;
+.group-head .icon-btn.del:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
 }
-.dlg-radio {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #1f2330;
-  cursor: pointer;
+.icon-btn.del-split {
+  width: auto;
+  gap: 1px;
+  padding: 0 4px;
 }
-.dlg-radio input {
-  margin: 0;
+.del-badge {
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 input,

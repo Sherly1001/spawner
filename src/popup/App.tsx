@@ -40,11 +40,6 @@ const UNASSIGNED = "(no cookies)";
 
 type DeleteScope = "temp" | "stored" | "both";
 
-interface GroupDeleteState {
-  host: string;
-  scope: DeleteScope;
-}
-
 interface DialogState {
   title: string;
   message: string;
@@ -72,7 +67,6 @@ export default function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [colorPickerId, setColorPickerId] = useState<string | null>(null);
-  const [groupDelete, setGroupDelete] = useState<GroupDeleteState | null>(null);
 
   const refresh = useCallback(async () => {
     const [list, currentSession, tab] = await Promise.all([
@@ -195,28 +189,14 @@ export default function App() {
     });
   }, [sessions]);
 
-  const confirmGroupDelete = () => {
-    if (!groupDelete) return;
-    const { host, scope } = groupDelete;
-    const matches = sessions.filter((s) => {
-      if (host === UNASSIGNED) {
-        if (s.domains.length !== 0) return false;
-      } else if (!s.domains.includes(host)) {
-        return false;
-      }
-      if (scope === "both") return true;
-      return s.type === scope;
-    });
-    setGroupDelete(null);
-    if (matches.length === 0) {
-      setDialog({
-        title: "No matches",
-        message: `No ${scope === "both" ? "" : scope + " "}sessions to delete in "${host}".`,
-        confirmLabel: "OK",
-        onConfirm: () => setDialog(null),
-      });
-      return;
-    }
+  const requestGroupDelete = (
+    host: string,
+    items: SessionSummary[],
+    scope: DeleteScope,
+  ) => {
+    const matches =
+      scope === "both" ? items : items.filter((s) => s.type === scope);
+    if (matches.length === 0) return;
     const names = matches.map((m) => m.name).join(", ");
     setDialog({
       title: `Delete ${matches.length} session${matches.length === 1 ? "" : "s"}`,
@@ -321,14 +301,31 @@ export default function App() {
                   <span className="count" data-tip="sessions">
                     {items.length}
                   </span>
-                  <button
-                    className="icon-btn del"
-                    data-tip={`Delete sessions in ${host}`}
-                    aria-label={`Delete sessions in ${host}`}
-                    onClick={() => setGroupDelete({ host, scope: "temp" })}
-                  >
-                    <FaTrash />
-                  </button>
+                  {(
+                    [
+                      ["temp", "T", "Delete temp sessions"],
+                      ["stored", "S", "Delete stored sessions"],
+                      ["both", "*", "Delete all sessions"],
+                    ] as [DeleteScope, string, string][]
+                  ).map(([scope, badge, tip]) => {
+                    const count =
+                      scope === "both"
+                        ? items.length
+                        : items.filter((s) => s.type === scope).length;
+                    return (
+                      <button
+                        key={scope}
+                        className="icon-btn del del-split"
+                        data-tip={`${tip} in ${host}`}
+                        aria-label={`${tip} in ${host}`}
+                        disabled={count === 0}
+                        onClick={() => requestGroupDelete(host, items, scope)}
+                      >
+                        <FaTrash />
+                        <span className="del-badge">{badge}</span>
+                      </button>
+                    );
+                  })}
                 </div>
                 <ul className="sessions">
                   {items.map((s) => (
@@ -459,46 +456,6 @@ export default function App() {
         onConfirm={dialog?.onConfirm}
         onCancel={() => setDialog(null)}
       />
-
-      {groupDelete && (
-        <div
-          className="dlg-backdrop"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setGroupDelete(null);
-          }}
-        >
-          <div className="dlg" role="dialog" aria-modal="true">
-            <h2 className="dlg-title">Delete sessions in {groupDelete.host}</h2>
-            <div className="dlg-radio-group">
-              {(["temp", "stored", "both"] as DeleteScope[]).map((opt) => (
-                <label key={opt} className="dlg-radio">
-                  <input
-                    type="radio"
-                    name="scope"
-                    checked={groupDelete.scope === opt}
-                    onChange={() =>
-                      setGroupDelete({ ...groupDelete, scope: opt })
-                    }
-                  />
-                  <span>
-                    {opt === "both"
-                      ? "Both"
-                      : opt === "temp"
-                        ? "Temp only"
-                        : "Stored only"}
-                  </span>
-                </label>
-              ))}
-            </div>
-            <div className="dlg-actions">
-              <button onClick={() => setGroupDelete(null)}>Cancel</button>
-              <button className="danger" onClick={confirmGroupDelete}>
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
