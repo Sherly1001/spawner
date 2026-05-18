@@ -178,6 +178,12 @@ export default function App() {
         else map.set(k, [s]);
       }
     }
+    for (const items of map.values()) {
+      items.sort((a, b) => {
+        if (a.type !== b.type) return a.type === "stored" ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+    }
     return [...map.entries()].sort(([a], [b]) => {
       if (a === UNASSIGNED) return -1;
       if (b === UNASSIGNED) return 1;
