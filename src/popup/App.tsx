@@ -1,18 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaArrowLeft,
   FaCog,
+  FaExternalLinkAlt,
   FaGithub,
-  FaPlus,
   FaReply,
   FaTimes,
   FaTrash,
   FaUndo,
 } from "react-icons/fa";
+import { LuCircleFadingPlus, LuCirclePlus } from "react-icons/lu";
 import * as api from "./api";
 import type { SessionSummary } from "./api";
 import Dialog, { type DialogTone } from "./Dialog";
 import Settings from "./Settings";
+import TooltipLayer from "./Tooltip";
 
 const COLORS = [
   "#e74c3c",
@@ -168,7 +170,7 @@ export default function App() {
     refresh();
   };
 
-  const groups = (() => {
+  const groups = useMemo(() => {
     const map = new Map<string, SessionSummary[]>();
     for (const s of sessions) {
       const keys = s.domains.length > 0 ? s.domains : [UNASSIGNED];
@@ -189,7 +191,7 @@ export default function App() {
       if (b === UNASSIGNED) return 1;
       return a.localeCompare(b);
     });
-  })();
+  }, [sessions]);
 
   const confirmGroupDelete = () => {
     if (!groupDelete) return;
@@ -235,7 +237,8 @@ export default function App() {
           <div className="title-actions">
             <button
               className="icon-btn"
-              title={view === "sessions" ? "Settings" : "Back to sessions"}
+              data-tip={view === "sessions" ? "Settings" : "Back to sessions"}
+              aria-label={view === "sessions" ? "Settings" : "Back to sessions"}
               onClick={() =>
                 setView(view === "sessions" ? "settings" : "sessions")
               }
@@ -247,7 +250,8 @@ export default function App() {
               href="https://github.com/Sherly1001/spawner"
               target="_blank"
               rel="noreferrer noopener"
-              title="GitHub repository"
+              data-tip="GitHub repository"
+              aria-label="GitHub repository"
             >
               <FaGithub />
             </a>
@@ -284,11 +288,21 @@ export default function App() {
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
-            <button className="primary" onClick={() => handleCreate("temp")}>
-              <FaPlus /> Temp
+            <button
+              className="primary"
+              data-tip="New temp session"
+              aria-label="New temp session"
+              onClick={() => handleCreate("temp")}
+            >
+              <LuCircleFadingPlus />
             </button>
-            <button className="primary" onClick={() => handleCreate("stored")}>
-              <FaPlus /> Stored
+            <button
+              className="primary"
+              data-tip="New stored session"
+              aria-label="New stored session"
+              onClick={() => handleCreate("stored")}
+            >
+              <LuCirclePlus />
             </button>
           </section>
 
@@ -299,15 +313,16 @@ export default function App() {
             {groups.map(([host, items]) => (
               <div key={host} className="group">
                 <div className="group-head">
-                  <span className="host" title={host}>
+                  <span className="host" data-tip={host}>
                     {host}
                   </span>
-                  <span className="count" title="sessions">
+                  <span className="count" data-tip="sessions">
                     {items.length}
                   </span>
                   <button
                     className="icon-btn del"
-                    title={`Delete sessions in ${host}`}
+                    data-tip={`Delete sessions in ${host}`}
+                    aria-label={`Delete sessions in ${host}`}
                     onClick={() => setGroupDelete({ host, scope: "temp" })}
                   >
                     <FaTrash />
@@ -322,7 +337,8 @@ export default function App() {
                             type="button"
                             className="dot dot-btn"
                             style={{ background: s.color }}
-                            title="Change color"
+                            data-tip="Change color"
+                            aria-label="Change color"
                             onClick={() =>
                               setColorPickerId(
                                 colorPickerId === s.id ? null : s.id,
@@ -342,7 +358,8 @@ export default function App() {
                                     "swatch" + (c === s.color ? " active" : "")
                                   }
                                   style={{ background: c }}
-                                  title={c}
+                                  data-tip={c}
+                                  aria-label={c}
                                   onClick={() => handleColorChange(s.id, c)}
                                 />
                               ))}
@@ -364,14 +381,14 @@ export default function App() {
                         ) : (
                           <span
                             className="name"
-                            title="Click to rename"
+                            data-tip="Click to rename"
                             onClick={() => startEdit(s)}
                           >
                             {s.name}
                           </span>
                         )}
                         <span className={`pill ${s.type}`}>{s.type}</span>
-                        <span className="count" title="cookies">
+                        <span className="count" data-tip="cookies">
                           {s.cookieCount}
                         </span>
                       </div>
@@ -386,10 +403,17 @@ export default function App() {
                             e.key === "Enter" && handleOpen(s.id)
                           }
                         />
-                        <button onClick={() => handleOpen(s.id)}>Open</button>
+                        <button
+                          data-tip="Open in session"
+                          aria-label="Open in session"
+                          onClick={() => handleOpen(s.id)}
+                        >
+                          <FaExternalLinkAlt />
+                        </button>
                         {current?.id !== s.id && (
                           <button
-                            title="Assign current tab to this session"
+                            data-tip="Assign current tab to this session"
+                            aria-label="Assign current tab to this session"
                             onClick={() => handleAssign(s.id)}
                           >
                             <FaReply />
@@ -397,14 +421,16 @@ export default function App() {
                         )}
                         <button
                           className="ghost"
-                          title="Clear cookies"
+                          data-tip="Clear cookies"
+                          aria-label="Clear cookies"
                           onClick={() => handleClear(s.id)}
                         >
                           <FaUndo />
                         </button>
                         <button
                           className="del"
-                          title="Delete"
+                          data-tip="Delete"
+                          aria-label="Delete"
                           onClick={() => handleDelete(s.id)}
                         >
                           <FaTimes />
@@ -418,6 +444,8 @@ export default function App() {
           </div>
         </>
       )}
+
+      <TooltipLayer />
 
       <Dialog
         open={!!dialog}
