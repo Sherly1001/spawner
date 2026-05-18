@@ -40,8 +40,7 @@ export default function TooltipLayer() {
         setTip({ text, rect: el.getBoundingClientRect(), el });
       }, SHOW_DELAY_MS);
     };
-    const hide = (e: Event) => {
-      if (!targetEl(e)) return;
+    const hide = (_e: Event) => {
       clearTimer();
       setTip(null);
       setPos(null);
