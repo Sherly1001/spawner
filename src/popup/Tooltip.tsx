@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 interface TipState {
   text: string;
   rect: DOMRect;
+  el: HTMLElement;
 }
 
 const MARGIN = 4;
@@ -36,7 +37,7 @@ export default function TooltipLayer() {
       showTimer.current = window.setTimeout(() => {
         showTimer.current = null;
         setPos(null);
-        setTip({ text, rect: el.getBoundingClientRect() });
+        setTip({ text, rect: el.getBoundingClientRect(), el });
       }, SHOW_DELAY_MS);
     };
     const hide = (e: Event) => {
@@ -64,6 +65,20 @@ export default function TooltipLayer() {
       window.removeEventListener("scroll", hideAll, true);
     };
   }, []);
+
+  useEffect(() => {
+    if (!tip) return;
+    const check = () => {
+      if (!document.contains(tip.el)) {
+        setTip(null);
+        setPos(null);
+      }
+    };
+    check();
+    const mo = new MutationObserver(check);
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, [tip]);
 
   useLayoutEffect(() => {
     if (!tip || !tipRef.current) return;
