@@ -1,0 +1,74 @@
+name: Build dist branch
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-dist
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild native deps (esbuild)
+        run: pnpm rebuild esbuild
+
+      - name: Build popup
+        run: node node_modules/vite/bin/vite.js build
+
+      - name: Build background
+        run: node node_modules/vite/bin/vite.js build --mode background
+
+      - name: Build content
+        run: node node_modules/vite/bin/vite.js build --mode content
+
+      - name: Build helper
+        run: node node_modules/vite/bin/vite.js build --mode helper
+
+      - name: Publish to dist branch
+        run: |
+          set -eux
+
+          STAGE="$(mktemp -d)"
+          cp -R manifest.json icons dist "$STAGE/"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout --orphan dist
+          git rm -rf . >/dev/null 2>&1 || true
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+
+          cp -R "$STAGE"/. .
+
+          git add -Af .
+          if git diff --cached --quiet; then
+            echo "No changes to publish."
+            exit 0
+          fi
+
+          git commit -m "build: ${GITHUB_SHA::7}"
+          git push -f origin dist
