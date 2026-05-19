@@ -31,6 +31,7 @@ export default function TooltipLayer() {
     const show = (e: Event) => {
       const el = targetEl(e);
       if (!el) return;
+      if (e.type === "focusin" && !el.matches(":focus-visible")) return;
       const text = el.getAttribute("data-tip");
       if (!text) return;
       clearTimer();
@@ -40,27 +41,22 @@ export default function TooltipLayer() {
         setTip({ text, rect: el.getBoundingClientRect(), el });
       }, SHOW_DELAY_MS);
     };
-    const hide = (_e: Event) => {
-      clearTimer();
-      setTip(null);
-      setPos(null);
-    };
     const hideAll = () => {
       clearTimer();
       setTip(null);
       setPos(null);
     };
     document.addEventListener("mouseover", show);
-    document.addEventListener("mouseout", hide);
+    document.addEventListener("mouseout", hideAll);
     document.addEventListener("focusin", show);
-    document.addEventListener("focusout", hide);
+    document.addEventListener("focusout", hideAll);
     window.addEventListener("scroll", hideAll, true);
     return () => {
       clearTimer();
       document.removeEventListener("mouseover", show);
-      document.removeEventListener("mouseout", hide);
+      document.removeEventListener("mouseout", hideAll);
       document.removeEventListener("focusin", show);
-      document.removeEventListener("focusout", hide);
+      document.removeEventListener("focusout", hideAll);
       window.removeEventListener("scroll", hideAll, true);
     };
   }, []);
