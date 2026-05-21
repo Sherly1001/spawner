@@ -8,8 +8,11 @@ so you can be logged into the same site as multiple users in different tabs.
 
 - **Temporary sessions** — in-memory, vanish when the browser closes
 - **Stored sessions** — persisted via `chrome.storage.local`
+- **Convert session type** — switch any session between temp and stored on the fly
 - **Per-tab isolation** — assign any tab to any session
 - **HTTP + `document.cookie`** interception — full isolation, not just network
+- **Cookie flush** — pull the current site's real browser cookies into a session,
+  or push a session's cookies back out to the real browser (copy, non-destructive)
 - **No accounts, no login, no telemetry**
 
 ## Build

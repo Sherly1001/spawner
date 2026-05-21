@@ -33,8 +33,20 @@ export const renameSession = (id: string, name: string) =>
   send<{ ok: boolean }>("renameSession", { id, name });
 export const setSessionColor = (id: string, color: string) =>
   send<{ ok: boolean }>("setSessionColor", { id, color });
+export const setSessionType = (id: string, type: "temp" | "stored") =>
+  send<{ ok: boolean }>("setSessionType", { id, type });
 export const clearSessionCookies = (id: string) =>
   send<{ ok: boolean }>("clearSessionCookies", { id });
+export const flushNativeToSession = (sessionId: string, url: string) =>
+  send<{ ok: boolean; count?: number; error?: string }>(
+    "flushNativeToSession",
+    { sessionId, url },
+  );
+export const flushSessionToNative = (sessionId: string) =>
+  send<{ ok: boolean; count?: number; error?: string }>(
+    "flushSessionToNative",
+    { sessionId },
+  );
 export const openInSession = (sessionId: string, url: string) =>
   send<{ ok: boolean; tabId?: number }>("openInSession", { sessionId, url });
 export const assignCurrentTab = (sessionId: string) =>

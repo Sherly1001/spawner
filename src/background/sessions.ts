@@ -100,6 +100,18 @@ export class SessionStore {
     return true;
   }
 
+  setType(id: string, type: Session["type"]): boolean {
+    const session = this.sessions.get(id);
+    if (!session) return false;
+    if (type !== "temp" && type !== "stored") return false;
+    if (session.type === type) return false;
+    session.type = type;
+    // persistStored rewrites the full stored map: a stored->temp session is
+    // dropped from storage, a temp->stored session is added.
+    this.persistStored();
+    return true;
+  }
+
   setColor(id: string, color: string): boolean {
     const session = this.sessions.get(id);
     if (!session) return false;

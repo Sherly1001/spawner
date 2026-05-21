@@ -5,6 +5,8 @@ import {
   FaExternalLinkAlt,
   FaGithub,
   FaReply,
+  FaSignInAlt,
+  FaSignOutAlt,
   FaTimes,
   FaTrash,
   FaUndo,
@@ -35,6 +37,8 @@ function normalizeUrl(input: string | undefined, fallback?: string): string {
   if (/^(https?|file|about):/i.test(value)) return value;
   return "https://" + value;
 }
+
+const isHttp = (u?: string) => /^https?:\/\//i.test(u || "");
 
 const UNASSIGNED = "(no cookies)";
 
@@ -131,6 +135,22 @@ export default function App() {
 
   const handleAssign = async (sessionId: string) => {
     await api.assignCurrentTab(sessionId);
+    refresh();
+  };
+
+  const handleToggleType = async (s: SessionSummary) => {
+    await api.setSessionType(s.id, s.type === "temp" ? "stored" : "temp");
+    refresh();
+  };
+
+  const handleFlushIn = async (sessionId: string) => {
+    if (!isHttp(activeTab?.url)) return;
+    await api.flushNativeToSession(sessionId, activeTab!.url!);
+    refresh();
+  };
+
+  const handleFlushOut = async (sessionId: string) => {
+    await api.flushSessionToNative(sessionId);
     refresh();
   };
 
@@ -248,7 +268,15 @@ export default function App() {
             <div className="current" style={{ borderColor: current.color }}>
               <span className="dot" style={{ background: current.color }} />
               This tab → <b>{current.name}</b>{" "}
-              <span className={`pill ${current.type}`}>{current.type}</span>
+              <button
+                type="button"
+                className={`pill pill-btn ${current.type}`}
+                data-tip="Toggle temp / stored"
+                aria-label="Toggle session type"
+                onClick={() => handleToggleType(current)}
+              >
+                {current.type}
+              </button>
               <button className="link" onClick={handleUnassign}>
                 unassign
               </button>
@@ -386,7 +414,15 @@ export default function App() {
                             {s.name}
                           </span>
                         )}
-                        <span className={`pill ${s.type}`}>{s.type}</span>
+                        <button
+                          type="button"
+                          className={`pill pill-btn ${s.type}`}
+                          data-tip="Toggle temp / stored"
+                          aria-label="Toggle session type"
+                          onClick={() => handleToggleType(s)}
+                        >
+                          {s.type}
+                        </button>
                         <span className="count" data-tip="cookies">
                           {s.cookieCount}
                         </span>
@@ -402,6 +438,8 @@ export default function App() {
                             e.key === "Enter" && handleOpen(s.id)
                           }
                         />
+                      </div>
+                      <div className="row3">
                         <button
                           data-tip="Open in session"
                           aria-label="Open in session"
@@ -418,6 +456,26 @@ export default function App() {
                             <FaReply />
                           </button>
                         )}
+                        <button
+                          data-tip={
+                            isHttp(activeTab?.url)
+                              ? "Pull this site's browser cookies into session"
+                              : "Open an http(s) tab to pull cookies"
+                          }
+                          aria-label="Pull native cookies into session"
+                          disabled={!isHttp(activeTab?.url)}
+                          onClick={() => handleFlushIn(s.id)}
+                        >
+                          <FaSignInAlt />
+                        </button>
+                        <button
+                          data-tip="Push session cookies to the real browser"
+                          aria-label="Push session cookies to native browser"
+                          disabled={s.cookieCount === 0}
+                          onClick={() => handleFlushOut(s.id)}
+                        >
+                          <FaSignOutAlt />
+                        </button>
                         <button
                           className="ghost"
                           data-tip="Clear cookies"

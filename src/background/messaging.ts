@@ -1,11 +1,13 @@
+import { getDomain } from "tldts";
 import browser, { type Runtime } from "webextension-polyfill";
+import type { CookieDetail } from "./cookie-jar";
 import {
   applyTabIcon,
   refreshIconsAllTabs,
   refreshIconsForSession,
 } from "./icons";
 import type { SessionStore } from "./sessions";
-import type { Session, SessionSummary, Settings } from "./types";
+import type { Session, SessionSummary, Settings, SessionType } from "./types";
 
 export type Message =
   | { type: "listSessions" }
@@ -13,7 +15,13 @@ export type Message =
   | { type: "deleteSession"; payload: { id: string } }
   | { type: "renameSession"; payload: { id: string; name: string } }
   | { type: "setSessionColor"; payload: { id: string; color: string } }
+  | { type: "setSessionType"; payload: { id: string; type: SessionType } }
   | { type: "clearSessionCookies"; payload: { id: string } }
+  | {
+      type: "flushNativeToSession";
+      payload: { sessionId: string; url: string };
+    }
+  | { type: "flushSessionToNative"; payload: { sessionId: string } }
   | {
       type: "openInSession";
       payload: { sessionId: string; url?: string };
@@ -50,6 +58,37 @@ function summarize(session: Session): SessionSummary {
     cookieCount: session.jar.cookieCount(),
     domains: session.jar.cookieDomains(),
   };
+}
+
+function nativeToDetail(c: browser.Cookies.Cookie): CookieDetail {
+  const ss = c.sameSite;
+  return {
+    name: c.name,
+    value: c.value,
+    domain: c.domain.replace(/^\./, ""),
+    path: c.path,
+    secure: c.secure,
+    httpOnly: c.httpOnly,
+    sameSite:
+      ss === "strict"
+        ? "strict"
+        : ss === "lax"
+          ? "lax"
+          : ss === "no_restriction"
+            ? "none"
+            : undefined,
+    hostOnly: c.hostOnly,
+    expires: c.session ? undefined : c.expirationDate,
+  };
+}
+
+function toughToNativeSameSite(
+  s: CookieDetail["sameSite"],
+): browser.Cookies.SameSiteStatus | undefined {
+  if (s === "none") return "no_restriction";
+  if (s === "lax") return "lax";
+  if (s === "strict") return "strict";
+  return undefined;
 }
 
 const handlers: Record<string, Handler> = {
@@ -99,10 +138,61 @@ const handlers: Record<string, Handler> = {
     return { ok };
   },
 
+  setSessionType: (store, msg) => {
+    if (msg.type !== "setSessionType") return;
+    const ok = store.setType(msg.payload.id, msg.payload.type);
+    return { ok };
+  },
+
   clearSessionCookies: (store, msg) => {
     if (msg.type !== "clearSessionCookies") return;
     store.clearCookies(msg.payload.id);
     return { ok: true };
+  },
+
+  flushNativeToSession: async (store, msg) => {
+    if (msg.type !== "flushNativeToSession") return;
+    const { sessionId, url } = msg.payload;
+    const session = store.sessions.get(sessionId);
+    if (!session) return { ok: false, error: "unknown session" };
+    const domain = getDomain(url);
+    if (!domain) return { ok: false, error: "no domain" };
+    const cookies = await browser.cookies.getAll({ domain });
+    let count = 0;
+    for (const c of cookies) {
+      session.jar.setFromCookie(nativeToDetail(c));
+      count++;
+    }
+    if (session.type === "stored") store.persistStored();
+    return { ok: true, count };
+  },
+
+  flushSessionToNative: async (store, msg) => {
+    if (msg.type !== "flushSessionToNative") return;
+    const session = store.sessions.get(msg.payload.sessionId);
+    if (!session) return { ok: false, error: "unknown session" };
+    let count = 0;
+    for (const d of session.jar.exportCookies()) {
+      const scheme = d.secure ? "https" : "http";
+      const url = `${scheme}://${d.domain}${d.path || "/"}`;
+      try {
+        await browser.cookies.set({
+          url,
+          name: d.name,
+          value: d.value,
+          domain: d.hostOnly ? undefined : d.domain,
+          path: d.path,
+          secure: d.secure,
+          httpOnly: d.httpOnly,
+          sameSite: toughToNativeSameSite(d.sameSite),
+          expirationDate: d.expires,
+        });
+        count++;
+      } catch {
+        // skip cookies the browser rejects (e.g. __Host- prefix violations)
+      }
+    }
+    return { ok: true, count };
   },
 
   openInSession: async (store, msg) => {

@@ -1,5 +1,21 @@
-import { CookieJar, type SerializedCookieJar } from "tough-cookie";
+import { Cookie, CookieJar, type SerializedCookieJar } from "tough-cookie";
 import { getDomain } from "tldts";
+
+/**
+ * Browser-agnostic cookie shape used to move cookies between the native
+ * browser store and a session jar. No browser API types leak into this file.
+ */
+export interface CookieDetail {
+  name: string;
+  value: string;
+  domain: string; // no leading dot
+  path: string;
+  secure: boolean;
+  httpOnly: boolean;
+  sameSite?: "strict" | "lax" | "none";
+  hostOnly: boolean;
+  expires?: number; // epoch seconds; undefined => session cookie
+}
 
 /**
  * Per-session cookie jar backed by tough-cookie. Pure data; no browser API
@@ -34,6 +50,73 @@ export class SessionJar {
     } catch {
       // ignore
     }
+  }
+
+  /** Insert a single cookie described by a browser-agnostic detail. */
+  setFromCookie(detail: CookieDetail): void {
+    const scheme = detail.secure ? "https" : "http";
+    const url = `${scheme}://${detail.domain}${detail.path || "/"}`;
+    try {
+      const cookie = new Cookie({
+        key: detail.name,
+        value: detail.value,
+        domain: detail.domain,
+        path: detail.path || "/",
+        secure: detail.secure,
+        httpOnly: detail.httpOnly,
+        sameSite: detail.sameSite,
+        hostOnly: detail.hostOnly,
+        expires:
+          detail.expires == null ? "Infinity" : new Date(detail.expires * 1000),
+      });
+      this.jar.setCookieSync(cookie, url, { ignoreError: true });
+    } catch {
+      // skip malformed cookie
+    }
+  }
+
+  /** Export every cookie in the jar as browser-agnostic details. */
+  exportCookies(): CookieDetail[] {
+    const cookies = this.jar.serializeSync()?.cookies ?? [];
+    const out: CookieDetail[] = [];
+    for (const c of cookies) {
+      const raw = c as {
+        key?: string;
+        value?: string;
+        domain?: string;
+        path?: string;
+        secure?: boolean;
+        httpOnly?: boolean;
+        sameSite?: string;
+        hostOnly?: boolean;
+        expires?: string;
+      };
+      const domain = (raw.domain ?? "").replace(/^\./, "");
+      if (!domain || raw.key == null) continue;
+      const sameSite =
+        raw.sameSite === "strict" ||
+        raw.sameSite === "lax" ||
+        raw.sameSite === "none"
+          ? raw.sameSite
+          : undefined;
+      let expires: number | undefined;
+      if (raw.expires && raw.expires !== "Infinity") {
+        const ms = Date.parse(raw.expires);
+        if (!Number.isNaN(ms)) expires = Math.floor(ms / 1000);
+      }
+      out.push({
+        name: raw.key,
+        value: raw.value ?? "",
+        domain,
+        path: raw.path || "/",
+        secure: !!raw.secure,
+        httpOnly: !!raw.httpOnly,
+        sameSite,
+        hostOnly: !!raw.hostOnly,
+        expires,
+      });
+    }
+    return out;
   }
 
   /** Cookie header for outgoing HTTP request. Includes HttpOnly. */
