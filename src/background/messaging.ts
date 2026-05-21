@@ -155,7 +155,16 @@ const handlers: Record<string, Handler> = {
     const { sessionId, url } = msg.payload;
     const session = store.sessions.get(sessionId);
     if (!session) return { ok: false, error: "unknown session" };
-    const domain = getDomain(url);
+    // Registrable domain (covers subdomains); fall back to bare hostname for
+    // localhost / IPs / intranet hosts that have no public suffix.
+    let domain = getDomain(url);
+    if (!domain) {
+      try {
+        domain = new URL(url).hostname;
+      } catch {
+        domain = "";
+      }
+    }
     if (!domain) return { ok: false, error: "no domain" };
     const cookies = await browser.cookies.getAll({ domain });
     let count = 0;
