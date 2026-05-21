@@ -454,6 +454,66 @@ button.ghost {
   cursor: wait;
 }
 
+.toasts {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 240px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border-left: 3px solid #82aaff;
+  background: #fff;
+  color: #1f2330;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  animation: toastIn 140ms ease-out;
+}
+.toast-loading {
+  border-left-color: #82aaff;
+}
+.toast-success {
+  border-left-color: #c3e88d;
+}
+.toast-error {
+  border-left-color: #ff757f;
+}
+.toast-spinner {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  border: 2px solid #cdd4e0;
+  border-top-color: #82aaff;
+  border-radius: 50%;
+  animation: toastSpin 600ms linear infinite;
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes toastSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .dlg-backdrop {
   position: fixed;
   inset: 0;
