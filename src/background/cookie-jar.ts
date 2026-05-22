@@ -23,7 +23,7 @@ export interface CookieDetail {
  * needs (request header / document.cookie / serialization).
  */
 export class SessionJar {
-  private readonly jar: CookieJar;
+  private jar: CookieJar;
 
   constructor(serialized?: SerializedCookieJar | null) {
     if (serialized) {
@@ -73,6 +73,49 @@ export class SessionJar {
     } catch {
       // skip malformed cookie
     }
+  }
+
+  /** Rebuild the jar from a full list of details (small jars; avoids
+   * fragile tough-cookie store-key matching). */
+  private replace(details: CookieDetail[]): void {
+    this.jar = new CookieJar(undefined, { looseMode: true });
+    for (const d of details) this.setFromCookie(d);
+  }
+
+  /** Remove the cookie identified by name+domain+path. */
+  removeCookie(name: string, domain: string, path: string): void {
+    const d = domain.replace(/^\./, "");
+    const p = path || "/";
+    this.replace(
+      this.exportCookies().filter(
+        (c) => !(c.name === name && c.domain === d && (c.path || "/") === p),
+      ),
+    );
+  }
+
+  /** Insert or replace a cookie. `oldKey` (the cookie's prior identity) is
+   * removed first, so renaming name/domain/path works. With no `oldKey`,
+   * any existing cookie sharing the new identity is overwritten. */
+  upsertCookie(
+    detail: CookieDetail,
+    oldKey?: { name: string; domain: string; path: string },
+  ): void {
+    const key = oldKey ?? {
+      name: detail.name,
+      domain: detail.domain,
+      path: detail.path,
+    };
+    const kd = key.domain.replace(/^\./, "");
+    const kp = key.path || "/";
+    const nd = detail.domain.replace(/^\./, "");
+    const np = detail.path || "/";
+    const kept = this.exportCookies().filter(
+      (c) =>
+        !(c.name === key.name && c.domain === kd && (c.path || "/") === kp) &&
+        !(c.name === detail.name && c.domain === nd && (c.path || "/") === np),
+    );
+    kept.push({ ...detail, domain: nd, path: np });
+    this.replace(kept);
   }
 
   /** Export every cookie in the jar as browser-agnostic details. */
