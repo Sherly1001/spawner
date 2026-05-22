@@ -20,6 +20,20 @@ export interface CreateSessionInput {
   color: string;
 }
 
+export interface CookieDetail {
+  name: string;
+  value: string;
+  domain: string; // no leading dot
+  path: string;
+  secure: boolean;
+  httpOnly: boolean;
+  sameSite?: "strict" | "lax" | "none";
+  hostOnly: boolean;
+  expires?: number; // epoch seconds; undefined => session cookie
+}
+
+export type CookieKey = { name: string; domain: string; path: string };
+
 function send<T>(type: string, payload?: unknown): Promise<T> {
   return browser.runtime.sendMessage({ type, payload }) as Promise<T>;
 }
@@ -58,6 +72,23 @@ export const currentTabSession = () =>
 export const getSettings = () => send<Settings>("getSettings");
 export const setSettings = (patch: Partial<Settings>) =>
   send<Settings>("setSettings", patch);
+export const listSessionCookies = (sessionId: string) =>
+  send<{ cookies: CookieDetail[] }>("listSessionCookies", { sessionId });
+export const upsertSessionCookie = (
+  sessionId: string,
+  cookie: CookieDetail,
+  oldKey?: CookieKey,
+) =>
+  send<{ ok: boolean; cookies: CookieDetail[] }>("upsertSessionCookie", {
+    sessionId,
+    cookie,
+    oldKey,
+  });
+export const deleteSessionCookie = (sessionId: string, key: CookieKey) =>
+  send<{ ok: boolean; cookies: CookieDetail[] }>("deleteSessionCookie", {
+    sessionId,
+    key,
+  });
 
 export async function getActiveTab(): Promise<browser.Tabs.Tab | null> {
   const [tab] = await browser.tabs.query({
