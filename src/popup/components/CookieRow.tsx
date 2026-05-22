@@ -1,4 +1,14 @@
 import type { CookieDetail } from "../api";
+import Select, { type SelectOption } from "./Select";
+
+type SameSite = "" | "lax" | "strict" | "none";
+
+const SAMESITE_OPTIONS: ReadonlyArray<SelectOption<SameSite>> = [
+  { value: "", label: "—" },
+  { value: "lax", label: "lax" },
+  { value: "strict", label: "strict" },
+  { value: "none", label: "none" },
+];
 
 export type Draft = CookieDetail & { _new?: boolean };
 
@@ -132,20 +142,13 @@ export default function CookieRow({
           </label>
           <label>
             sameSite
-            <select
-              value={cookie.sameSite ?? ""}
-              onChange={(e) =>
-                set({
-                  sameSite: (e.target.value ||
-                    undefined) as CookieDetail["sameSite"],
-                })
+            <Select
+              value={(cookie.sameSite ?? "") as SameSite}
+              options={SAMESITE_OPTIONS}
+              onChange={(v) =>
+                set({ sameSite: (v || undefined) as CookieDetail["sameSite"] })
               }
-            >
-              <option value="">—</option>
-              <option value="lax">lax</option>
-              <option value="strict">strict</option>
-              <option value="none">none</option>
-            </select>
+            />
           </label>
           <div className="cookie-actions">
             <button className="primary" disabled={!canSave} onClick={onSave}>

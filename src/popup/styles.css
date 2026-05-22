@@ -694,6 +694,95 @@ button.ghost {
   align-self: flex-start;
 }
 
+/* Custom Select */
+.select {
+  position: relative;
+}
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  padding: 5px 8px;
+}
+.select-trigger:hover {
+  background: #fff;
+  border-color: #c4c9d2;
+}
+.select-trigger.open,
+.select-trigger:focus {
+  outline: none;
+  border-color: #6ea8fe;
+}
+.select-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.select-arrow {
+  flex: none;
+  color: #6b7280;
+  font-size: 10px;
+  transition: transform 120ms ease;
+}
+.select-trigger.open .select-arrow {
+  transform: rotate(180deg);
+}
+
+.select-menu {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #d8dce3;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+  overflow-y: auto;
+  z-index: 1100;
+  animation: selectIn 110ms ease-out;
+}
+.select-menu.select-below {
+  top: calc(100% + 4px);
+}
+.select-menu.select-above {
+  bottom: calc(100% + 4px);
+}
+.select-option {
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  color: #1f2330;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.select-option.active {
+  background: #f1f3f7;
+}
+.select-option.selected {
+  font-weight: 600;
+}
+.select-option.selected.active {
+  background: #e6edff;
+}
+@keyframes selectIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* PerfectScrollbar (OverlayScrollbars) theme */
 .os-theme-spawner {
   --os-size: 10px;
