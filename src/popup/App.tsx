@@ -5,6 +5,7 @@ import CreateSession from "./components/CreateSession";
 import CurrentTabBanner from "./components/CurrentTabBanner";
 import Dialog, { type DialogTone } from "./components/Dialog";
 import Header from "./components/Header";
+import PerfectScrollbar from "./components/PerfectScrollbar";
 import SessionList, { type DeleteScope } from "./components/SessionList";
 import Toasts from "./components/Toasts";
 import TooltipLayer from "./components/Tooltip";
@@ -220,22 +221,27 @@ export default function App() {
           <p className="sub">Cookies — {cookiesSession?.name ?? ""}</p>
         )}
         {view === "sessions" && (
-          <CurrentTabBanner
-            current={current}
-            onToggleType={handleToggleType}
-            onUnassign={handleUnassign}
-          />
+          <>
+            <CurrentTabBanner
+              current={current}
+              onToggleType={handleToggleType}
+              onUnassign={handleUnassign}
+            />
+            <CreateSession
+              name={name}
+              onName={setName}
+              onCreate={handleCreate}
+            />
+          </>
         )}
       </header>
 
-      {view === "settings" ? (
-        <Settings onBack={() => setView("sessions")} />
-      ) : view === "cookies" && cookiesSession ? (
-        <CookiesView session={cookiesSession} addToast={addToast} />
-      ) : (
-        <>
-          <CreateSession name={name} onName={setName} onCreate={handleCreate} />
-
+      <PerfectScrollbar className="app-scroll">
+        {view === "settings" ? (
+          <Settings onBack={() => setView("sessions")} />
+        ) : view === "cookies" && cookiesSession ? (
+          <CookiesView session={cookiesSession} addToast={addToast} />
+        ) : (
           <SessionList
             sessions={sessions}
             currentId={current?.id}
@@ -261,8 +267,8 @@ export default function App() {
             onDelete={handleDelete}
             onGroupDelete={requestGroupDelete}
           />
-        </>
-      )}
+        )}
+      </PerfectScrollbar>
 
       <Toasts toasts={toasts} onDismiss={dismissToast} />
 

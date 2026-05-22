@@ -20,9 +20,21 @@ body {
 }
 
 .app {
+  display: flex;
+  flex-direction: column;
   padding: 12px;
   min-height: 420px;
+  max-height: 580px;
   box-sizing: border-box;
+}
+
+header {
+  flex: 0 0 auto;
+}
+
+.app-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 header h1 {
@@ -665,4 +677,19 @@ button.ghost {
 }
 .cookie-add {
   align-self: flex-start;
+}
+
+/* PerfectScrollbar (OverlayScrollbars) theme */
+.os-theme-spawner {
+  --os-size: 10px;
+  --os-padding-perpendicular: 2px;
+  --os-padding-axis: 2px;
+  --os-handle-border-radius: 5px;
+  --os-track-border-radius: 5px;
+  --os-handle-bg: rgba(0, 0, 0, 0.25);
+  --os-handle-bg-hover: rgba(0, 0, 0, 0.45);
+  --os-handle-bg-active: rgba(0, 0, 0, 0.55);
+  --os-track-bg: transparent;
+  --os-track-bg-hover: rgba(0, 0, 0, 0.06);
+  --os-track-bg-active: rgba(0, 0, 0, 0.06);
 }
