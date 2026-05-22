@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaArrowLeft,
   FaCog,
@@ -17,6 +17,8 @@ import type { SessionSummary } from "./api";
 import Dialog, { type DialogTone } from "./Dialog";
 import Settings from "./Settings";
 import TooltipLayer from "./Tooltip";
+import { useToasts } from "./hooks/useToasts";
+import Toasts from "./components/Toasts";
 
 const COLORS = [
   "#ff757f",
@@ -60,12 +62,6 @@ interface ActiveTab {
   url?: string;
 }
 
-interface ToastState {
-  id: number;
-  msg: string;
-  kind: "loading" | "success" | "error";
-}
-
 export default function App() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [current, setCurrent] = useState<SessionSummary | null>(null);
@@ -77,58 +73,7 @@ export default function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [colorPickerId, setColorPickerId] = useState<string | null>(null);
-  const [toasts, setToasts] = useState<ToastState[]>([]);
-  const toastSeq = useRef(0);
-  const toastTimers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
-
-  const dismissToast = useCallback((id: number) => {
-    const t = toastTimers.current.get(id);
-    if (t) {
-      clearTimeout(t);
-      toastTimers.current.delete(id);
-    }
-    setToasts((prev) => prev.filter((x) => x.id !== id));
-  }, []);
-
-  const scheduleDismiss = useCallback(
-    (id: number, kind: ToastState["kind"]) => {
-      if (kind === "loading") return;
-      toastTimers.current.set(
-        id,
-        setTimeout(() => dismissToast(id), kind === "error" ? 3000 : 2000),
-      );
-    },
-    [dismissToast],
-  );
-
-  // Push a new toast on top; returns its id for later in-place update.
-  const addToast = useCallback(
-    (msg: string, kind: ToastState["kind"]): number => {
-      const id = ++toastSeq.current;
-      setToasts((prev) => [{ id, msg, kind }, ...prev]);
-      scheduleDismiss(id, kind);
-      return id;
-    },
-    [scheduleDismiss],
-  );
-
-  const updateToast = useCallback(
-    (id: number, msg: string, kind: ToastState["kind"]) => {
-      setToasts((prev) =>
-        prev.map((x) => (x.id === id ? { ...x, msg, kind } : x)),
-      );
-      scheduleDismiss(id, kind);
-    },
-    [scheduleDismiss],
-  );
-
-  useEffect(() => {
-    const timers = toastTimers.current;
-    return () => {
-      for (const t of timers.values()) clearTimeout(t);
-      timers.clear();
-    };
-  }, []);
+  const { toasts, addToast, updateToast, dismissToast } = useToasts();
 
   const refresh = useCallback(async () => {
     const [list, currentSession, tab] = await Promise.all([
@@ -572,21 +517,7 @@ export default function App() {
         </>
       )}
 
-      {toasts.length > 0 && (
-        <div className="toasts">
-          {toasts.map((t) => (
-            <div
-              key={t.id}
-              className={`toast toast-${t.kind}`}
-              role="status"
-              onClick={() => dismissToast(t.id)}
-            >
-              {t.kind === "loading" && <span className="toast-spinner" />}
-              {t.msg}
-            </div>
-          ))}
-        </div>
-      )}
+      <Toasts toasts={toasts} onDismiss={dismissToast} />
 
       <TooltipLayer />
 
