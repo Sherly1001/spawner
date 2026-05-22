@@ -1,13 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  FaExternalLinkAlt,
-  FaReply,
-  FaSignInAlt,
-  FaSignOutAlt,
-  FaTimes,
-  FaTrash,
-  FaUndo,
-} from "react-icons/fa";
+import { useCallback, useEffect, useState } from "react";
 import * as api from "./api";
 import type { SessionSummary } from "./api";
 import Dialog, { type DialogTone } from "./Dialog";
@@ -18,32 +9,8 @@ import Toasts from "./components/Toasts";
 import Header from "./components/Header";
 import CurrentTabBanner from "./components/CurrentTabBanner";
 import CreateSession from "./components/CreateSession";
-
-const COLORS = [
-  "#ff757f",
-  "#ffc777",
-  "#c3e88d",
-  "#86e1fc",
-  "#82aaff",
-  "#c099ff",
-  "#c53b53",
-  "#3e68d7",
-];
-
-const pickColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
-
-function normalizeUrl(input: string | undefined, fallback?: string): string {
-  const value = (input || "").trim();
-  if (!value) return fallback || "about:blank";
-  if (/^(https?|file|about):/i.test(value)) return value;
-  return "https://" + value;
-}
-
-const isHttp = (u?: string) => /^https?:\/\//i.test(u || "");
-
-const UNASSIGNED = "(no cookies)";
-
-type DeleteScope = "temp" | "stored" | "both";
+import SessionList, { type DeleteScope } from "./components/SessionList";
+import { pickColor, normalizeUrl, isHttp } from "./util";
 
 interface DialogState {
   title: string;
@@ -198,30 +165,10 @@ export default function App() {
     refresh();
   };
 
-  const groups = useMemo(() => {
-    const map = new Map<string, SessionSummary[]>();
-    for (const s of sessions) {
-      const keys = s.domains.length > 0 ? s.domains : [UNASSIGNED];
-      for (const k of keys) {
-        const arr = map.get(k);
-        if (arr) arr.push(s);
-        else map.set(k, [s]);
-      }
-    }
-    const naturalCompare = (a: string, b: string) =>
-      a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
-    for (const items of map.values()) {
-      items.sort((a, b) => {
-        if (a.type !== b.type) return a.type === "stored" ? -1 : 1;
-        return naturalCompare(a.name, b.name);
-      });
-    }
-    return [...map.entries()].sort(([a], [b]) => {
-      if (a === UNASSIGNED) return -1;
-      if (b === UNASSIGNED) return 1;
-      return naturalCompare(a, b);
-    });
-  }, [sessions]);
+  const toggleColorPicker = (id: string) =>
+    setColorPickerId(colorPickerId === id ? null : id);
+
+  const openCookies = (_id: string) => {};
 
   const requestGroupDelete = (
     host: string,
@@ -273,189 +220,31 @@ export default function App() {
         <>
           <CreateSession name={name} onName={setName} onCreate={handleCreate} />
 
-          <div className="groups">
-            {sessions.length === 0 && (
-              <div className="empty">No sessions yet. Create one above.</div>
-            )}
-            {groups.map(([host, items]) => (
-              <div key={host} className="group">
-                <div className="group-head">
-                  <span className="host" data-tip={host}>
-                    {host}
-                  </span>
-                  <span className="count" data-tip="sessions">
-                    {items.length}
-                  </span>
-                  {(
-                    [
-                      ["temp", "T", "Delete temp sessions"],
-                      ["stored", "S", "Delete stored sessions"],
-                      ["both", "*", "Delete all sessions"],
-                    ] as [DeleteScope, string, string][]
-                  ).map(([scope, badge, tip]) => {
-                    const count =
-                      scope === "both"
-                        ? items.length
-                        : items.filter((s) => s.type === scope).length;
-                    return (
-                      <button
-                        key={scope}
-                        className="icon-btn del del-split"
-                        data-tip={`${tip} in ${host}`}
-                        aria-label={`${tip} in ${host}`}
-                        disabled={count === 0}
-                        onClick={() => requestGroupDelete(host, items, scope)}
-                      >
-                        <FaTrash />
-                        <span className="del-badge">{badge}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <ul className="sessions">
-                  {items.map((s) => (
-                    <li key={s.id} className="session">
-                      <div className="row1">
-                        <span className="dot-wrap">
-                          <button
-                            type="button"
-                            className="dot dot-btn"
-                            style={{ background: s.color }}
-                            data-tip="Change color"
-                            aria-label="Change color"
-                            onClick={() =>
-                              setColorPickerId(
-                                colorPickerId === s.id ? null : s.id,
-                              )
-                            }
-                          />
-                          {colorPickerId === s.id && (
-                            <div
-                              className="color-popover"
-                              onMouseLeave={() => setColorPickerId(null)}
-                            >
-                              {COLORS.map((c) => (
-                                <button
-                                  key={c}
-                                  type="button"
-                                  className={
-                                    "swatch" + (c === s.color ? " active" : "")
-                                  }
-                                  style={{ background: c }}
-                                  data-tip={c}
-                                  aria-label={c}
-                                  onClick={() => handleColorChange(s.id, c)}
-                                />
-                              ))}
-                            </div>
-                          )}
-                        </span>
-                        {editingId === s.id ? (
-                          <input
-                            className="name-edit"
-                            autoFocus
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") commitEdit();
-                              else if (e.key === "Escape") cancelEdit();
-                            }}
-                            onBlur={commitEdit}
-                          />
-                        ) : (
-                          <span
-                            className="name"
-                            data-tip="Click to rename"
-                            onClick={() => startEdit(s)}
-                          >
-                            {s.name}
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          className={`pill pill-btn ${s.type}`}
-                          data-tip="Toggle temp / stored"
-                          aria-label="Toggle session type"
-                          onClick={() => handleToggleType(s)}
-                        >
-                          {s.type}
-                        </button>
-                        <span className="count" data-tip="cookies">
-                          {s.cookieCount}
-                        </span>
-                      </div>
-                      <div className="row2">
-                        <input
-                          placeholder={activeTab?.url || "https://example.com"}
-                          value={urlMap[s.id] || ""}
-                          onChange={(e) =>
-                            setUrlMap({ ...urlMap, [s.id]: e.target.value })
-                          }
-                          onKeyDown={(e) =>
-                            e.key === "Enter" && handleOpen(s.id)
-                          }
-                        />
-                      </div>
-                      <div className="row3">
-                        <button
-                          data-tip="Open in session"
-                          aria-label="Open in session"
-                          onClick={() => handleOpen(s.id)}
-                        >
-                          <FaExternalLinkAlt />
-                        </button>
-                        {current?.id !== s.id && (
-                          <button
-                            data-tip="Assign current tab to this session"
-                            aria-label="Assign current tab to this session"
-                            onClick={() => handleAssign(s.id)}
-                          >
-                            <FaReply />
-                          </button>
-                        )}
-                        <button
-                          data-tip={
-                            isHttp(activeTab?.url)
-                              ? "Pull this site's browser cookies into session"
-                              : "Open an http(s) tab to pull cookies"
-                          }
-                          aria-label="Pull native cookies into session"
-                          disabled={!isHttp(activeTab?.url)}
-                          onClick={() => handleFlushIn(s.id)}
-                        >
-                          <FaSignInAlt />
-                        </button>
-                        <button
-                          data-tip="Push session cookies to the real browser"
-                          aria-label="Push session cookies to native browser"
-                          disabled={s.cookieCount === 0}
-                          onClick={() => handleFlushOut(s.id)}
-                        >
-                          <FaSignOutAlt />
-                        </button>
-                        <button
-                          className="ghost"
-                          data-tip="Clear cookies"
-                          aria-label="Clear cookies"
-                          onClick={() => handleClear(s.id)}
-                        >
-                          <FaUndo />
-                        </button>
-                        <button
-                          className="del"
-                          data-tip="Delete"
-                          aria-label="Delete"
-                          onClick={() => handleDelete(s.id)}
-                        >
-                          <FaTimes />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+          <SessionList
+            sessions={sessions}
+            currentId={current?.id}
+            activeUrl={activeTab?.url}
+            editingId={editingId}
+            editName={editName}
+            colorPickerId={colorPickerId}
+            urlMap={urlMap}
+            onUrl={(id, v) => setUrlMap({ ...urlMap, [id]: v })}
+            onOpen={handleOpen}
+            onStartEdit={startEdit}
+            onEditName={setEditName}
+            onCommitEdit={commitEdit}
+            onCancelEdit={cancelEdit}
+            onToggleColor={toggleColorPicker}
+            onColorChange={handleColorChange}
+            onToggleType={handleToggleType}
+            onOpenCookies={openCookies}
+            onAssign={handleAssign}
+            onFlushIn={handleFlushIn}
+            onFlushOut={handleFlushOut}
+            onClear={handleClear}
+            onDelete={handleDelete}
+            onGroupDelete={requestGroupDelete}
+          />
         </>
       )}
 
