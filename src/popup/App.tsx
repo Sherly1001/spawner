@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  FaArrowLeft,
-  FaCog,
   FaExternalLinkAlt,
-  FaGithub,
   FaReply,
   FaSignInAlt,
   FaSignOutAlt,
@@ -11,7 +8,6 @@ import {
   FaTrash,
   FaUndo,
 } from "react-icons/fa";
-import { LuCircleFadingPlus, LuCirclePlus } from "react-icons/lu";
 import * as api from "./api";
 import type { SessionSummary } from "./api";
 import Dialog, { type DialogTone } from "./Dialog";
@@ -19,6 +15,9 @@ import Settings from "./Settings";
 import TooltipLayer from "./Tooltip";
 import { useToasts } from "./hooks/useToasts";
 import Toasts from "./components/Toasts";
+import Header from "./components/Header";
+import CurrentTabBanner from "./components/CurrentTabBanner";
+import CreateSession from "./components/CreateSession";
 
 const COLORS = [
   "#ff757f",
@@ -55,7 +54,7 @@ interface DialogState {
   onConfirm: () => void;
 }
 
-type View = "sessions" | "settings";
+export type View = "sessions" | "settings";
 
 interface ActiveTab {
   id?: number;
@@ -249,87 +248,30 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <div className="title-row">
-          <h1>Spawner</h1>
-          <div className="title-actions">
-            <button
-              className="icon-btn"
-              data-tip={view === "sessions" ? "Settings" : "Back to sessions"}
-              aria-label={view === "sessions" ? "Settings" : "Back to sessions"}
-              onClick={() =>
-                setView(view === "sessions" ? "settings" : "sessions")
-              }
-            >
-              {view === "sessions" ? <FaCog /> : <FaArrowLeft />}
-            </button>
-            <a
-              className="icon-btn"
-              href="https://github.com/Sherly1001/spawner"
-              target="_blank"
-              rel="noreferrer noopener"
-              data-tip="GitHub repository"
-              aria-label="GitHub repository"
-            >
-              <FaGithub />
-            </a>
-          </div>
-        </div>
+        <Header
+          view={view}
+          onToggleSettings={() =>
+            setView(view === "sessions" ? "settings" : "sessions")
+          }
+        />
         {view === "sessions" && (
           <p className="sub">Multi-login sessions in normal tabs.</p>
         )}
         {view === "settings" && <p className="sub">Settings</p>}
-        {view === "sessions" &&
-          (current ? (
-            <div className="current" style={{ borderColor: current.color }}>
-              <span className="dot" style={{ background: current.color }} />
-              This tab → <b>{current.name}</b>{" "}
-              <button
-                type="button"
-                className={`pill pill-btn ${current.type}`}
-                data-tip="Toggle temp / stored"
-                aria-label="Toggle session type"
-                onClick={() => handleToggleType(current)}
-              >
-                {current.type}
-              </button>
-              <button className="link" onClick={handleUnassign}>
-                unassign
-              </button>
-            </div>
-          ) : (
-            <div className="current muted">
-              This tab uses real browser cookies.
-            </div>
-          ))}
+        {view === "sessions" && (
+          <CurrentTabBanner
+            current={current}
+            onToggleType={handleToggleType}
+            onUnassign={handleUnassign}
+          />
+        )}
       </header>
 
       {view === "settings" ? (
         <Settings onBack={() => setView("sessions")} />
       ) : (
         <>
-          <section className="create">
-            <input
-              placeholder="New session name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <button
-              className="primary"
-              data-tip="New temp session"
-              aria-label="New temp session"
-              onClick={() => handleCreate("temp")}
-            >
-              <LuCircleFadingPlus />
-            </button>
-            <button
-              className="primary"
-              data-tip="New stored session"
-              aria-label="New stored session"
-              onClick={() => handleCreate("stored")}
-            >
-              <LuCirclePlus />
-            </button>
-          </section>
+          <CreateSession name={name} onName={setName} onCreate={handleCreate} />
 
           <div className="groups">
             {sessions.length === 0 && (
