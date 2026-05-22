@@ -33,7 +33,23 @@ export type Message =
   | { type: "getSettings" }
   | { type: "setSettings"; payload?: Partial<Settings> }
   | { type: "setCookieFromPage"; payload: { cookie: string; url: string } }
-  | { type: "getCookieForPage"; payload: { url: string } };
+  | { type: "getCookieForPage"; payload: { url: string } }
+  | { type: "listSessionCookies"; payload: { sessionId: string } }
+  | {
+      type: "upsertSessionCookie";
+      payload: {
+        sessionId: string;
+        cookie: CookieDetail;
+        oldKey?: { name: string; domain: string; path: string };
+      };
+    }
+  | {
+      type: "deleteSessionCookie";
+      payload: {
+        sessionId: string;
+        key: { name: string; domain: string; path: string };
+      };
+    };
 
 type Handler = (
   store: SessionStore,
@@ -303,6 +319,31 @@ const handlers: Record<string, Handler> = {
     return {
       cookie: session ? session.jar.documentString(msg.payload.url) : "",
     };
+  },
+
+  listSessionCookies: (store, msg) => {
+    if (msg.type !== "listSessionCookies") return;
+    const session = store.sessions.get(msg.payload.sessionId);
+    return { cookies: session ? session.jar.exportCookies() : [] };
+  },
+
+  upsertSessionCookie: (store, msg) => {
+    if (msg.type !== "upsertSessionCookie") return;
+    const session = store.sessions.get(msg.payload.sessionId);
+    if (!session) return { ok: false, cookies: [] };
+    session.jar.upsertCookie(msg.payload.cookie, msg.payload.oldKey);
+    if (session.type === "stored") store.persistStored();
+    return { ok: true, cookies: session.jar.exportCookies() };
+  },
+
+  deleteSessionCookie: (store, msg) => {
+    if (msg.type !== "deleteSessionCookie") return;
+    const session = store.sessions.get(msg.payload.sessionId);
+    if (!session) return { ok: false, cookies: [] };
+    const { name, domain, path } = msg.payload.key;
+    session.jar.removeCookie(name, domain, path);
+    if (session.type === "stored") store.persistStored();
+    return { ok: true, cookies: session.jar.exportCookies() };
   },
 };
 
