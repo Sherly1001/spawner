@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import * as api from "../api";
 import type { CookieDetail, SessionSummary } from "../api";
-import CookieRow, { type Draft } from "./CookieRow";
+import CookieRow, { type Draft } from "../components/CookieRow";
 
 interface Props {
   session: SessionSummary;

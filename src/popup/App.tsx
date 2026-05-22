@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import * as api from "./api";
 import type { SessionSummary } from "./api";
-import Dialog, { type DialogTone } from "./Dialog";
-import Settings from "./Settings";
-import TooltipLayer from "./Tooltip";
+import Dialog, { type DialogTone } from "./components/Dialog";
+import Settings from "./views/Settings";
+import TooltipLayer from "./components/Tooltip";
 import { useToasts } from "./hooks/useToasts";
 import Toasts from "./components/Toasts";
 import Header from "./components/Header";
 import CurrentTabBanner from "./components/CurrentTabBanner";
 import CreateSession from "./components/CreateSession";
 import SessionList, { type DeleteScope } from "./components/SessionList";
-import CookiesView from "./components/CookiesView";
+import CookiesView from "./views/CookiesView";
 import { pickColor, normalizeUrl, isHttp } from "./util";
 
 interface DialogState {
