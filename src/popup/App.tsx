@@ -10,6 +10,7 @@ import Header from "./components/Header";
 import CurrentTabBanner from "./components/CurrentTabBanner";
 import CreateSession from "./components/CreateSession";
 import SessionList, { type DeleteScope } from "./components/SessionList";
+import CookiesView from "./components/CookiesView";
 import { pickColor, normalizeUrl, isHttp } from "./util";
 
 interface DialogState {
@@ -21,7 +22,7 @@ interface DialogState {
   onConfirm: () => void;
 }
 
-export type View = "sessions" | "settings";
+export type View = "sessions" | "settings" | "cookies";
 
 interface ActiveTab {
   id?: number;
@@ -39,6 +40,7 @@ export default function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [colorPickerId, setColorPickerId] = useState<string | null>(null);
+  const [cookiesSessionId, setCookiesSessionId] = useState<string | null>(null);
   const { toasts, addToast, updateToast, dismissToast } = useToasts();
 
   const refresh = useCallback(async () => {
@@ -168,7 +170,12 @@ export default function App() {
   const toggleColorPicker = (id: string) =>
     setColorPickerId(colorPickerId === id ? null : id);
 
-  const openCookies = (_id: string) => {};
+  const openCookies = (id: string) => {
+    setCookiesSessionId(id);
+    setView("cookies");
+  };
+  const cookiesSession =
+    sessions.find((s) => s.id === cookiesSessionId) ?? null;
 
   const requestGroupDelete = (
     host: string,
@@ -197,14 +204,21 @@ export default function App() {
       <header>
         <Header
           view={view}
-          onToggleSettings={() =>
-            setView(view === "sessions" ? "settings" : "sessions")
-          }
+          onToggleSettings={() => {
+            if (view === "sessions") setView("settings");
+            else {
+              if (view === "cookies") refresh();
+              setView("sessions");
+            }
+          }}
         />
         {view === "sessions" && (
           <p className="sub">Multi-login sessions in normal tabs.</p>
         )}
         {view === "settings" && <p className="sub">Settings</p>}
+        {view === "cookies" && (
+          <p className="sub">Cookies — {cookiesSession?.name ?? ""}</p>
+        )}
         {view === "sessions" && (
           <CurrentTabBanner
             current={current}
@@ -216,6 +230,8 @@ export default function App() {
 
       {view === "settings" ? (
         <Settings onBack={() => setView("sessions")} />
+      ) : view === "cookies" && cookiesSession ? (
+        <CookiesView session={cookiesSession} addToast={addToast} />
       ) : (
         <>
           <CreateSession name={name} onName={setName} onCreate={handleCreate} />
