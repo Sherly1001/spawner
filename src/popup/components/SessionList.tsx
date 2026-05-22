@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FaChevronDown, FaChevronRight, FaTrash } from "react-icons/fa";
+import { FaChevronRight, FaTrash } from "react-icons/fa";
 import type { SessionSummary } from "../api";
 import SessionRow from "./SessionRow";
 
@@ -87,13 +87,13 @@ export default function SessionList(p: Props) {
             <div className="group-head">
               <button
                 type="button"
-                className="icon-btn chevron"
+                className={`icon-btn chevron${isCollapsed ? "" : " open"}`}
                 data-tip={isCollapsed ? "Expand" : "Collapse"}
                 aria-label={isCollapsed ? "Expand group" : "Collapse group"}
                 aria-expanded={!isCollapsed}
                 onClick={() => toggle(host)}
               >
-                {isCollapsed ? <FaChevronRight /> : <FaChevronDown />}
+                <FaChevronRight />
               </button>
               <span
                 className="host"

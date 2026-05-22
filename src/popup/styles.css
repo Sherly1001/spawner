@@ -175,6 +175,10 @@ button:disabled {
   padding: 2px;
   color: #6b7280;
   font-size: 10px;
+  transition: transform 120ms ease;
+}
+.group-head .chevron.open {
+  transform: rotate(90deg);
 }
 .group-head .chevron:hover {
   background: none;
@@ -664,8 +668,15 @@ button.ghost {
   white-space: nowrap;
 }
 .cookie-chevron {
+  display: inline-flex;
+  align-items: center;
   color: #6b7280;
   flex: none;
+  font-size: 11px;
+  transition: transform 120ms ease;
+}
+.cookie-chevron.open {
+  transform: rotate(90deg);
 }
 .cookie-form {
   display: flex;
@@ -725,6 +736,8 @@ button.ghost {
   white-space: nowrap;
 }
 .select-arrow {
+  display: inline-flex;
+  align-items: center;
   flex: none;
   color: #6b7280;
   font-size: 10px;

@@ -1,3 +1,4 @@
+import { FaChevronRight } from "react-icons/fa";
 import type { CookieDetail } from "../api";
 import Select, { type SelectOption } from "./Select";
 
@@ -58,7 +59,9 @@ export default function CookieRow({
       >
         <span className="cookie-name">{cookie.name || "(new cookie)"}</span>
         <span className="cookie-domain">{cookie.domain}</span>
-        <span className="cookie-chevron">{expanded ? "▾" : "▸"}</span>
+        <span className={`cookie-chevron${expanded ? " open" : ""}`}>
+          <FaChevronRight />
+        </span>
       </button>
       {expanded && (
         <div className="cookie-form">

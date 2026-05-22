@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { FaChevronDown } from "react-icons/fa";
 
 export interface SelectOption<T extends string = string> {
   value: T;
@@ -152,7 +153,7 @@ export default function Select<T extends string>({
       >
         <span className="select-value">{selected?.label ?? ""}</span>
         <span className="select-arrow" aria-hidden="true">
-          ▾
+          <FaChevronDown />
         </span>
       </button>
       {open && (
