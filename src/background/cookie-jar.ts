@@ -1,5 +1,5 @@
-import { Cookie, CookieJar, type SerializedCookieJar } from "tough-cookie";
 import { getDomain } from "tldts";
+import { Cookie, CookieJar, type SerializedCookieJar } from "tough-cookie";
 
 /**
  * Browser-agnostic cookie shape used to move cookies between the native

@@ -7,7 +7,7 @@ import {
   refreshIconsForSession,
 } from "./icons";
 import type { SessionStore } from "./sessions";
-import type { Session, SessionSummary, Settings, SessionType } from "./types";
+import type { Session, SessionSummary, SessionType, Settings } from "./types";
 
 export type Message =
   | { type: "listSessions" }
