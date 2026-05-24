@@ -248,7 +248,7 @@ export default function App() {
         )}
       </Box>
 
-      <ScrollArea type="hover" scrollbarSize={8} offsetScrollbars h="100%">
+      <ScrollArea type="hover" scrollbarSize={8} h="100%">
         {view === "settings" ? (
           <Settings onBack={() => setView("sessions")} />
         ) : view === "cookies" && cookiesSession ? (
