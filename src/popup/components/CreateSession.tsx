@@ -1,4 +1,6 @@
+import { Group, TextInput } from "@mantine/core";
 import { LuCircleFadingPlus, LuCirclePlus } from "react-icons/lu";
+import IconButton from "./IconButton";
 
 interface Props {
   name: string;
@@ -8,28 +10,29 @@ interface Props {
 
 export default function CreateSession({ name, onName, onCreate }: Props) {
   return (
-    <section className="create">
-      <input
+    <Group gap={6} wrap="nowrap" mb="lg">
+      <TextInput
+        style={{ flex: 1 }}
         placeholder="New session name"
         value={name}
-        onChange={(e) => onName(e.target.value)}
+        onChange={(e) => onName(e.currentTarget.value)}
       />
-      <button
-        className="primary"
-        data-tip="New temp session"
-        aria-label="New temp session"
+      <IconButton
+        label="New temp session"
+        variant="filled"
+        color="brand"
         onClick={() => onCreate("temp")}
       >
         <LuCircleFadingPlus />
-      </button>
-      <button
-        className="primary"
-        data-tip="New stored session"
-        aria-label="New stored session"
+      </IconButton>
+      <IconButton
+        label="New stored session"
+        variant="filled"
+        color="brand"
         onClick={() => onCreate("stored")}
       >
         <LuCirclePlus />
-      </button>
-    </section>
+      </IconButton>
+    </Group>
   );
 }

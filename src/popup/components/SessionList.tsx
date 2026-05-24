@@ -1,6 +1,16 @@
+import {
+  Box,
+  Collapse,
+  Group,
+  Paper,
+  Stack,
+  Text,
+  Tooltip,
+} from "@mantine/core";
 import { useMemo, useState } from "react";
 import { FaChevronRight, FaTrash } from "react-icons/fa";
 import type { SessionSummary } from "../api";
+import IconButton from "./IconButton";
 import SessionRow from "./SessionRow";
 
 export type DeleteScope = "temp" | "stored" | "both";
@@ -72,68 +82,75 @@ export default function SessionList(p: Props) {
     });
   }, [p.sessions]);
 
+  const splits: [DeleteScope, string, string][] = [
+    ["temp", "T", "Delete temp sessions"],
+    ["stored", "S", "Delete stored sessions"],
+    ["both", "*", "Delete all sessions"],
+  ];
+
   return (
-    <div className="groups">
+    <Stack gap="lg">
       {p.sessions.length === 0 && (
-        <div className="empty">No sessions yet. Create one above.</div>
+        <Text c="dimmed" fz="sm" ta="center" fs="italic" py="md">
+          No sessions yet. Create one above.
+        </Text>
       )}
       {groups.map(([host, items]) => {
         const isCollapsed = collapsed.has(host);
         return (
-          <div
-            key={host}
-            className={"group" + (isCollapsed ? " collapsed" : "")}
-          >
-            <div className="group-head">
-              <button
-                type="button"
-                className={`icon-btn chevron${isCollapsed ? "" : " open"}`}
-                data-tip={isCollapsed ? "Expand" : "Collapse"}
-                aria-label={isCollapsed ? "Expand group" : "Collapse group"}
-                aria-expanded={!isCollapsed}
+          <Paper key={host} withBorder bg="gray.0" p={8} radius="lg">
+            <Group gap="xs" wrap="nowrap" mb={isCollapsed ? 0 : 6}>
+              <IconButton
+                label={isCollapsed ? "Expand" : "Collapse"}
+                size="sm"
                 onClick={() => toggle(host)}
+                style={{
+                  transition: "transform 120ms ease",
+                  transform: isCollapsed ? "none" : "rotate(90deg)",
+                }}
               >
                 <FaChevronRight />
-              </button>
-              <span
-                className="host"
-                role="button"
-                data-tip={host}
+              </IconButton>
+              <Text
+                fz="xs"
+                fw={600}
+                truncate
+                style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
                 onClick={() => toggle(host)}
               >
                 {host}
-              </span>
-              <span className="count" data-tip="sessions">
-                {items.length}
-              </span>
-              {(
-                [
-                  ["temp", "T", "Delete temp sessions"],
-                  ["stored", "S", "Delete stored sessions"],
-                  ["both", "*", "Delete all sessions"],
-                ] as [DeleteScope, string, string][]
-              ).map(([scope, badge, tip]) => {
+              </Text>
+              <Tooltip label="sessions">
+                <Text fz="xs" c="dimmed">
+                  {items.length}
+                </Text>
+              </Tooltip>
+              {splits.map(([scope, badge, tip]) => {
                 const count =
                   scope === "both"
                     ? items.length
                     : items.filter((s) => s.type === scope).length;
                 return (
-                  <button
+                  <IconButton
                     key={scope}
-                    className="icon-btn del del-split"
-                    data-tip={`${tip} in ${host}`}
-                    aria-label={`${tip} in ${host}`}
+                    label={`${tip} in ${host}`}
+                    color="red"
+                    size="sm"
+                    w="auto"
+                    px={4}
                     disabled={count === 0}
                     onClick={() => p.onGroupDelete(host, items, scope)}
                   >
                     <FaTrash />
-                    <span className="del-badge">{badge}</span>
-                  </button>
+                    <Box component="span" fz={9} fw={700} ml={1}>
+                      {badge}
+                    </Box>
+                  </IconButton>
                 );
               })}
-            </div>
-            {!isCollapsed && (
-              <ul className="sessions">
+            </Group>
+            <Collapse expanded={!isCollapsed}>
+              <Stack gap={6}>
                 {items.map((s) => (
                   <SessionRow
                     key={s.id}
@@ -161,11 +178,11 @@ export default function SessionList(p: Props) {
                     onDelete={() => p.onDelete(s.id)}
                   />
                 ))}
-              </ul>
-            )}
-          </div>
+              </Stack>
+            </Collapse>
+          </Paper>
         );
       })}
-    </div>
+    </Stack>
   );
 }

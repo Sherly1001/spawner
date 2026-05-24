@@ -1,26 +1,7 @@
+import { Box, Code, Group, Paper, Stack, Switch, Text } from "@mantine/core";
 import { useEffect, useState } from "react";
 import type { Settings as SettingsValue } from "../api";
 import * as api from "../api";
-
-interface ToggleProps {
-  checked: boolean;
-  disabled?: boolean;
-  onChange: (next: boolean) => void;
-}
-
-function Toggle({ checked, onChange, disabled }: ToggleProps) {
-  return (
-    <button
-      className={"toggle" + (checked ? " on" : "")}
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-    >
-      <span className="thumb" />
-    </button>
-  );
-}
 
 export default function Settings(_props: { onBack: () => void }) {
   const [settings, setSettings] = useState<SettingsValue | null>(null);
@@ -39,47 +20,52 @@ export default function Settings(_props: { onBack: () => void }) {
 
   if (!settings) {
     return (
-      <div className="settings">
-        <p className="muted">Loading…</p>
-      </div>
+      <Text c="dimmed" fz="sm">
+        Loading…
+      </Text>
     );
   }
 
   return (
-    <div className="settings">
-      <div className="setting-row">
-        <div className="setting-text">
-          <div className="setting-label">
-            Prefix tab title with session name
-          </div>
-          <div className="setting-desc">
-            Shows <code>[Session]&nbsp;page&nbsp;title</code> in the tab strip
-            so you can tell which session a tab belongs to at a glance.
-          </div>
-        </div>
-        <Toggle
-          checked={!!settings.prefixTabName}
-          disabled={saving}
-          onChange={(v) => update({ prefixTabName: v })}
-        />
-      </div>
+    <Stack gap="sm">
+      <Paper withBorder p="sm" radius="md">
+        <Group justify="space-between" wrap="nowrap" gap="md">
+          <Box style={{ flex: 1, minWidth: 0 }}>
+            <Text fw={500} fz="xs">
+              Prefix tab title with session name
+            </Text>
+            <Text c="dimmed" fz="xs" mt={4}>
+              Shows <Code fz="10px">[Session]&nbsp;page&nbsp;title</Code> in the
+              tab strip so you can tell which session a tab belongs to at a
+              glance.
+            </Text>
+          </Box>
+          <Switch
+            checked={!!settings.prefixTabName}
+            disabled={saving}
+            onChange={(e) => update({ prefixTabName: e.currentTarget.checked })}
+          />
+        </Group>
+      </Paper>
 
-      <div className="setting-row">
-        <div className="setting-text">
-          <div className="setting-label">
-            Colorize extension icon by session
-          </div>
-          <div className="setting-desc">
-            On: normal tabs show a gray icon, session tabs show the session's
-            color. Off: icon is always blue.
-          </div>
-        </div>
-        <Toggle
-          checked={settings.colorizeIcon !== false}
-          disabled={saving}
-          onChange={(v) => update({ colorizeIcon: v })}
-        />
-      </div>
-    </div>
+      <Paper withBorder p="sm" radius="md">
+        <Group justify="space-between" wrap="nowrap" gap="md">
+          <Box style={{ flex: 1, minWidth: 0 }}>
+            <Text fw={500} fz="xs">
+              Colorize extension icon by session
+            </Text>
+            <Text c="dimmed" fz="xs" mt={4}>
+              On: normal tabs show a gray icon, session tabs show the session's
+              color. Off: icon is always blue.
+            </Text>
+          </Box>
+          <Switch
+            checked={settings.colorizeIcon !== false}
+            disabled={saving}
+            onChange={(e) => update({ colorizeIcon: e.currentTarget.checked })}
+          />
+        </Group>
+      </Paper>
+    </Stack>
   );
 }

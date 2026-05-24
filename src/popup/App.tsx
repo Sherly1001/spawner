@@ -1,27 +1,16 @@
+import { Box, Flex, ScrollArea, Text } from "@mantine/core";
+import { modals } from "@mantine/modals";
 import { useCallback, useEffect, useState } from "react";
 import type { SessionSummary } from "./api";
 import * as api from "./api";
 import CreateSession from "./components/CreateSession";
 import CurrentTabBanner from "./components/CurrentTabBanner";
-import Dialog, { type DialogTone } from "./components/Dialog";
 import Header from "./components/Header";
-import PerfectScrollbar from "./components/PerfectScrollbar";
 import SessionList, { type DeleteScope } from "./components/SessionList";
-import Toasts from "./components/Toasts";
-import TooltipLayer from "./components/Tooltip";
-import { useToasts } from "./hooks/useToasts";
+import { addToast, updateToast } from "./toast";
 import { isHttp, normalizeUrl, pickColor } from "./util";
 import CookiesView from "./views/CookiesView";
 import Settings from "./views/Settings";
-
-interface DialogState {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  cancelLabel?: string;
-  tone?: DialogTone;
-  onConfirm: () => void;
-}
 
 export type View = "sessions" | "settings" | "cookies";
 
@@ -30,19 +19,34 @@ interface ActiveTab {
   url?: string;
 }
 
+function confirmDanger(
+  title: string,
+  message: string,
+  confirmLabel: string,
+  onConfirm: () => void,
+) {
+  modals.openConfirmModal({
+    title,
+    centered: true,
+    size: 300,
+    children: <Text size="sm">{message}</Text>,
+    labels: { confirm: confirmLabel, cancel: "Cancel" },
+    confirmProps: { color: "red" },
+    onConfirm,
+  });
+}
+
 export default function App() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [current, setCurrent] = useState<SessionSummary | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab | null>(null);
   const [name, setName] = useState("");
   const [urlMap, setUrlMap] = useState<Record<string, string>>({});
-  const [dialog, setDialog] = useState<DialogState | null>(null);
   const [view, setView] = useState<View>("sessions");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [colorPickerId, setColorPickerId] = useState<string | null>(null);
   const [cookiesSessionId, setCookiesSessionId] = useState<string | null>(null);
-  const { toasts, addToast, updateToast, dismissToast } = useToasts();
 
   const refresh = useCallback(async () => {
     const [list, currentSession, tab] = await Promise.all([
@@ -77,32 +81,28 @@ export default function App() {
 
   const handleDelete = (id: string) => {
     const target = sessions.find((s) => s.id === id);
-    setDialog({
-      title: "Delete session",
-      message: `Remove "${target?.name || "this session"}" and its cookies?`,
-      confirmLabel: "Delete",
-      tone: "danger",
-      onConfirm: async () => {
-        setDialog(null);
+    confirmDanger(
+      "Delete session",
+      `Remove "${target?.name || "this session"}" and its cookies?`,
+      "Delete",
+      async () => {
         await api.deleteSession(id);
         refresh();
       },
-    });
+    );
   };
 
   const handleClear = (id: string) => {
     const target = sessions.find((s) => s.id === id);
-    setDialog({
-      title: "Clear cookies",
-      message: `Wipe all cookies in "${target?.name || "this session"}"?`,
-      confirmLabel: "Clear",
-      tone: "danger",
-      onConfirm: async () => {
-        setDialog(null);
+    confirmDanger(
+      "Clear cookies",
+      `Wipe all cookies in "${target?.name || "this session"}"?`,
+      "Clear",
+      async () => {
         await api.clearSessionCookies(id);
         refresh();
       },
-    });
+    );
   };
 
   const handleAssign = async (sessionId: string) => {
@@ -187,22 +187,26 @@ export default function App() {
       scope === "both" ? items : items.filter((s) => s.type === scope);
     if (matches.length === 0) return;
     const names = matches.map((m) => m.name).join(", ");
-    setDialog({
-      title: `Delete ${matches.length} session${matches.length === 1 ? "" : "s"}`,
-      message: `Remove ${scope === "both" ? "all" : scope} session${matches.length === 1 ? "" : "s"} in "${host}"? (${names})`,
-      confirmLabel: "Delete",
-      tone: "danger",
-      onConfirm: async () => {
-        setDialog(null);
+    confirmDanger(
+      `Delete ${matches.length} session${matches.length === 1 ? "" : "s"}`,
+      `Remove ${scope === "both" ? "all" : scope} session${matches.length === 1 ? "" : "s"} in "${host}"? (${names})`,
+      "Delete",
+      async () => {
         await Promise.all(matches.map((m) => api.deleteSession(m.id)));
         refresh();
       },
-    });
+    );
   };
 
   return (
-    <div className="app">
-      <header>
+    <Flex
+      direction="column"
+      w={360}
+      h={560}
+      p={8}
+      style={{ overflow: "hidden" }}
+    >
+      <Box component="header">
         <Header
           view={view}
           onToggleSettings={() => {
@@ -214,11 +218,19 @@ export default function App() {
           }}
         />
         {view === "sessions" && (
-          <p className="sub">Multi-login sessions in normal tabs.</p>
+          <Text c="dimmed" fz="xs" mt={2} mb="lg">
+            Multi-login sessions in normal tabs.
+          </Text>
         )}
-        {view === "settings" && <p className="sub">Settings</p>}
+        {view === "settings" && (
+          <Text c="dimmed" fz="xs" mt={2} mb="lg">
+            Settings
+          </Text>
+        )}
         {view === "cookies" && (
-          <p className="sub">Cookies — {cookiesSession?.name ?? ""}</p>
+          <Text c="dimmed" fz="xs" mt={2} mb="lg">
+            Cookies — {cookiesSession?.name ?? ""}
+          </Text>
         )}
         {view === "sessions" && (
           <>
@@ -234,9 +246,9 @@ export default function App() {
             />
           </>
         )}
-      </header>
+      </Box>
 
-      <PerfectScrollbar className="app-scroll">
+      <ScrollArea type="hover" scrollbarSize={8} offsetScrollbars h="100%">
         {view === "settings" ? (
           <Settings onBack={() => setView("sessions")} />
         ) : view === "cookies" && cookiesSession ? (
@@ -268,22 +280,7 @@ export default function App() {
             onGroupDelete={requestGroupDelete}
           />
         )}
-      </PerfectScrollbar>
-
-      <Toasts toasts={toasts} onDismiss={dismissToast} />
-
-      <TooltipLayer />
-
-      <Dialog
-        open={!!dialog}
-        title={dialog?.title}
-        message={dialog?.message}
-        confirmLabel={dialog?.confirmLabel}
-        cancelLabel={dialog?.cancelLabel}
-        tone={dialog?.tone}
-        onConfirm={dialog?.onConfirm}
-        onCancel={() => setDialog(null)}
-      />
-    </div>
+      </ScrollArea>
+    </Flex>
   );
 }

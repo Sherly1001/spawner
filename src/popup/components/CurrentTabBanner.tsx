@@ -1,3 +1,12 @@
+import {
+  Anchor,
+  Badge,
+  ColorSwatch,
+  Group,
+  Paper,
+  Text,
+  Tooltip,
+} from "@mantine/core";
 import type { SessionSummary } from "../api";
 
 interface Props {
@@ -13,25 +22,41 @@ export default function CurrentTabBanner({
 }: Props) {
   if (!current) {
     return (
-      <div className="current muted">This tab uses real browser cookies.</div>
+      <Paper withBorder p="xs" mb="lg" radius="md">
+        <Text c="dimmed" fz="xs">
+          This tab uses real browser cookies.
+        </Text>
+      </Paper>
     );
   }
   return (
-    <div className="current" style={{ borderColor: current.color }}>
-      <span className="dot" style={{ background: current.color }} />
-      This tab → <b>{current.name}</b>{" "}
-      <button
-        type="button"
-        className={`pill pill-btn ${current.type}`}
-        data-tip="Toggle temp / stored"
-        aria-label="Toggle session type"
-        onClick={() => onToggleType(current)}
-      >
-        {current.type}
-      </button>
-      <button className="link" onClick={onUnassign}>
-        unassign
-      </button>
-    </div>
+    <Paper
+      withBorder
+      p="xs"
+      mb="lg"
+      radius="md"
+      style={{ borderLeft: `3px solid ${current.color}` }}
+    >
+      <Group gap="xs" wrap="nowrap">
+        <ColorSwatch color={current.color} size={10} withShadow={false} />
+        <Text fz="xs" style={{ flex: 1, minWidth: 0 }} truncate>
+          This tab → <b>{current.name}</b>
+        </Text>
+        <Tooltip label="Toggle temp / stored">
+          <Badge
+            component="button"
+            color={current.type === "temp" ? "yellow" : "blue"}
+            variant="light"
+            style={{ cursor: "pointer" }}
+            onClick={() => onToggleType(current)}
+          >
+            {current.type}
+          </Badge>
+        </Tooltip>
+        <Anchor component="button" fz="xs" onClick={onUnassign}>
+          unassign
+        </Anchor>
+      </Group>
+    </Paper>
   );
 }

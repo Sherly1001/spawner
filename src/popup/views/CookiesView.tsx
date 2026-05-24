@@ -1,11 +1,13 @@
+import { Button, Stack, Text } from "@mantine/core";
 import { useCallback, useEffect, useState } from "react";
 import type { CookieDetail, SessionSummary } from "../api";
 import * as api from "../api";
 import CookieRow, { type Draft } from "../components/CookieRow";
+import type { ToastKind } from "../toast";
 
 interface Props {
   session: SessionSummary;
-  addToast: (msg: string, kind: "loading" | "success" | "error") => number;
+  addToast: (msg: string, kind: ToastKind) => string;
 }
 
 const keyOf = (c: CookieDetail) => `${c.name} ${c.domain} ${c.path || "/"}`;
@@ -104,11 +106,13 @@ export default function CookiesView({ session, addToast }: Props) {
   };
 
   return (
-    <div className="cookies">
+    <Stack gap="xs" py="xs">
       {cookies.length === 0 && !adding && (
-        <div className="empty">No cookies in this session.</div>
+        <Text c="dimmed" fz="sm" ta="center" fs="italic" py="md">
+          No cookies in this session.
+        </Text>
       )}
-      <ul className="cookie-list">
+      <Stack gap={4}>
         {cookies.map((c) => {
           const k = keyOf(c);
           return (
@@ -133,18 +137,19 @@ export default function CookiesView({ session, addToast }: Props) {
             onDelete={() => setAdding(null)}
           />
         )}
-      </ul>
+      </Stack>
       {!adding && (
-        <button
-          className="primary cookie-add"
+        <Button
+          variant="light"
+          style={{ alignSelf: "flex-start" }}
           onClick={() => {
             setAdding(blankDraft(session.domains[0] ?? ""));
             setExpanded(null);
           }}
         >
           + add cookie
-        </button>
+        </Button>
       )}
-    </div>
+    </Stack>
   );
 }

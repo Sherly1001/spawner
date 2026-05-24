@@ -1,11 +1,23 @@
+import {
+  Button,
+  Checkbox,
+  Collapse,
+  Group,
+  Paper,
+  Select,
+  Stack,
+  Text,
+  TextInput,
+  UnstyledButton,
+} from "@mantine/core";
+import { DateTimePicker } from "@mantine/dates";
+import dayjs from "dayjs";
 import { FaChevronRight } from "react-icons/fa";
 import type { CookieDetail } from "../api";
-import Select, { type SelectOption } from "./Select";
 
-type SameSite = "" | "lax" | "strict" | "none";
-
-const SAMESITE_OPTIONS: ReadonlyArray<SelectOption<SameSite>> = [
-  { value: "", label: "—" },
+// Mantine Select dislikes an empty-string option value; use a sentinel.
+const SAMESITE_DATA = [
+  { value: "unset", label: "—" },
   { value: "lax", label: "lax" },
   { value: "strict", label: "strict" },
   { value: "none", label: "none" },
@@ -13,20 +25,11 @@ const SAMESITE_OPTIONS: ReadonlyArray<SelectOption<SameSite>> = [
 
 export type Draft = CookieDetail & { _new?: boolean };
 
-function toLocalInput(epochSec?: number): string {
-  if (epochSec == null) return "";
-  const d = new Date(epochSec * 1000);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`;
-}
+const toPicker = (epochSec?: number): string | null =>
+  epochSec == null ? null : dayjs.unix(epochSec).format("YYYY-MM-DD HH:mm:ss");
 
-function fromLocalInput(v: string): number | undefined {
-  if (!v) return undefined;
-  const ms = Date.parse(v);
-  return Number.isNaN(ms) ? undefined : Math.floor(ms / 1000);
-}
+const fromPicker = (v: string | null): number | undefined =>
+  v ? dayjs(v).unix() : undefined;
 
 interface Props {
   cookie: Draft;
@@ -50,119 +53,116 @@ export default function CookieRow({
   const canSave = cookie.name.trim() !== "" && cookie.domain.trim() !== "";
 
   return (
-    <li className="cookie">
-      <button
-        type="button"
-        className="cookie-head"
-        aria-expanded={expanded}
+    <Paper withBorder radius="md">
+      <UnstyledButton
+        w="100%"
+        px={8}
+        py={7}
         onClick={onToggle}
+        aria-expanded={expanded}
       >
-        <span className="cookie-name">{cookie.name || "(new cookie)"}</span>
-        <span className="cookie-domain">{cookie.domain}</span>
-        <span className={`cookie-chevron${expanded ? " open" : ""}`}>
-          <FaChevronRight />
-        </span>
-      </button>
-      {expanded && (
-        <div className="cookie-form">
-          <label>
-            name
-            <input
-              value={cookie.name}
-              onChange={(e) => set({ name: e.target.value })}
-            />
-          </label>
-          <label>
-            value
-            <input
-              value={cookie.value}
-              onChange={(e) => set({ value: e.target.value })}
-            />
-          </label>
-          <label>
-            domain
-            <input
-              value={cookie.domain}
-              onChange={(e) => set({ domain: e.target.value })}
-            />
-          </label>
-          <label>
-            path
-            <input
-              value={cookie.path}
-              onChange={(e) => set({ path: e.target.value })}
-            />
-          </label>
-          <label className="cookie-check">
-            <input
-              type="checkbox"
-              checked={session}
-              onChange={(e) =>
-                set({
-                  expires: e.target.checked
-                    ? undefined
-                    : Math.floor(Date.now() / 1000) + 86400,
-                })
-              }
-            />
-            session cookie (no expiry)
-          </label>
+        <Group gap="xs" wrap="nowrap">
+          <Text fz="sm" fw={600} truncate style={{ minWidth: 0 }}>
+            {cookie.name || "(new cookie)"}
+          </Text>
+          <Text fz="xs" c="dimmed" truncate style={{ marginLeft: "auto" }}>
+            {cookie.domain}
+          </Text>
+          <Text
+            component="span"
+            c="dimmed"
+            fz="xs"
+            style={{
+              display: "inline-flex",
+              transition: "transform 120ms ease",
+              transform: expanded ? "rotate(90deg)" : "none",
+            }}
+          >
+            <FaChevronRight />
+          </Text>
+        </Group>
+      </UnstyledButton>
+      <Collapse expanded={expanded}>
+        <Stack gap={6} px={8} pb={10}>
+          <TextInput
+            label="name"
+            value={cookie.name}
+            onChange={(e) => set({ name: e.currentTarget.value })}
+          />
+          <TextInput
+            label="value"
+            value={cookie.value}
+            onChange={(e) => set({ value: e.currentTarget.value })}
+          />
+          <TextInput
+            label="domain"
+            value={cookie.domain}
+            onChange={(e) => set({ domain: e.currentTarget.value })}
+          />
+          <TextInput
+            label="path"
+            value={cookie.path}
+            onChange={(e) => set({ path: e.currentTarget.value })}
+          />
+          <Checkbox
+            label="session cookie (no expiry)"
+            checked={session}
+            onChange={(e) =>
+              set({
+                expires: e.currentTarget.checked
+                  ? undefined
+                  : Math.floor(Date.now() / 1000) + 86400,
+              })
+            }
+          />
           {!session && (
-            <label>
-              expires
-              <input
-                type="datetime-local"
-                value={toLocalInput(cookie.expires)}
-                onChange={(e) =>
-                  set({ expires: fromLocalInput(e.target.value) })
-                }
-              />
-            </label>
+            <DateTimePicker
+              size="xs"
+              label="expires"
+              valueFormat="YYYY-MM-DD HH:mm"
+              value={toPicker(cookie.expires)}
+              onChange={(v) => set({ expires: fromPicker(v) })}
+            />
           )}
-          <label className="cookie-check">
-            <input
-              type="checkbox"
-              checked={cookie.secure}
-              onChange={(e) => set({ secure: e.target.checked })}
-            />
-            secure
-          </label>
-          <label className="cookie-check">
-            <input
-              type="checkbox"
-              checked={cookie.httpOnly}
-              onChange={(e) => set({ httpOnly: e.target.checked })}
-            />
-            httpOnly
-          </label>
-          <label className="cookie-check">
-            <input
-              type="checkbox"
-              checked={cookie.hostOnly}
-              onChange={(e) => set({ hostOnly: e.target.checked })}
-            />
-            host-only
-          </label>
-          <label>
-            sameSite
-            <Select
-              value={(cookie.sameSite ?? "") as SameSite}
-              options={SAMESITE_OPTIONS}
-              onChange={(v) =>
-                set({ sameSite: (v || undefined) as CookieDetail["sameSite"] })
-              }
-            />
-          </label>
-          <div className="cookie-actions">
-            <button className="primary" disabled={!canSave} onClick={onSave}>
+          <Checkbox
+            label="secure"
+            checked={cookie.secure}
+            onChange={(e) => set({ secure: e.currentTarget.checked })}
+          />
+          <Checkbox
+            label="httpOnly"
+            checked={cookie.httpOnly}
+            onChange={(e) => set({ httpOnly: e.currentTarget.checked })}
+          />
+          <Checkbox
+            label="host-only"
+            checked={cookie.hostOnly}
+            onChange={(e) => set({ hostOnly: e.currentTarget.checked })}
+          />
+          <Select
+            label="sameSite"
+            data={SAMESITE_DATA}
+            value={(cookie.sameSite ?? "unset") as string}
+            allowDeselect={false}
+            onChange={(v) =>
+              set({
+                sameSite:
+                  !v || v === "unset"
+                    ? undefined
+                    : (v as CookieDetail["sameSite"]),
+              })
+            }
+          />
+          <Group gap="xs" mt={4}>
+            <Button disabled={!canSave} onClick={onSave}>
               Save
-            </button>
-            <button className="del" onClick={onDelete}>
+            </Button>
+            <Button color="red" variant="light" onClick={onDelete}>
               Delete
-            </button>
-          </div>
-        </div>
-      )}
-    </li>
+            </Button>
+          </Group>
+        </Stack>
+      </Collapse>
+    </Paper>
   );
 }
