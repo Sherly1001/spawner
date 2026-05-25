@@ -49,6 +49,10 @@ export type Message =
         sessionId: string;
         key: { name: string; domain: string; path: string };
       };
+    }
+  | {
+      type: "importSessionCookies";
+      payload: { sessionId: string; cookies: CookieDetail[] };
     };
 
 type Handler = (
@@ -344,6 +348,19 @@ const handlers: Record<string, Handler> = {
     session.jar.removeCookie(name, domain, path);
     if (session.type === "stored") store.persistStored();
     return { ok: true, cookies: session.jar.exportCookies() };
+  },
+
+  importSessionCookies: (store, msg) => {
+    if (msg.type !== "importSessionCookies") return;
+    const session = store.sessions.get(msg.payload.sessionId);
+    if (!session) return { ok: false, count: 0, cookies: [] };
+    let count = 0;
+    for (const cookie of msg.payload.cookies) {
+      session.jar.upsertCookie(cookie);
+      count++;
+    }
+    if (count > 0 && session.type === "stored") store.persistStored();
+    return { ok: true, count, cookies: session.jar.exportCookies() };
   },
 };
 

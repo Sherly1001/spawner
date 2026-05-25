@@ -89,6 +89,14 @@ export const deleteSessionCookie = (sessionId: string, key: CookieKey) =>
     sessionId,
     key,
   });
+export const importSessionCookies = (
+  sessionId: string,
+  cookies: CookieDetail[],
+) =>
+  send<{ ok: boolean; count: number; cookies: CookieDetail[] }>(
+    "importSessionCookies",
+    { sessionId, cookies },
+  );
 
 export async function getActiveTab(): Promise<browser.Tabs.Tab | null> {
   const [tab] = await browser.tabs.query({

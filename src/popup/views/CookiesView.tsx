@@ -1,9 +1,42 @@
-import { Button, Stack, Text } from "@mantine/core";
+import {
+  Button,
+  Group,
+  Modal,
+  SegmentedControl,
+  Stack,
+  Text,
+  Textarea,
+  TextInput,
+} from "@mantine/core";
+import { useClipboard, useDisclosure } from "@mantine/hooks";
 import { useCallback, useEffect, useState } from "react";
 import type { CookieDetail, SessionSummary } from "../api";
 import * as api from "../api";
 import CookieRow, { type Draft } from "../components/CookieRow";
+import {
+  type CookieFormat,
+  parseCookies,
+  serializeCookies,
+} from "../cookie-io";
 import type { ToastKind } from "../toast";
+
+const FORMAT_DATA = [
+  { value: "json", label: "JSON" },
+  { value: "header", label: "Header" },
+  { value: "netscape", label: "Netscape" },
+];
+
+const FORMAT_LABEL: Record<CookieFormat, string> = {
+  json: "cookie-editor JSON.",
+  header: 'Cookie header string ("a=1; b=2").',
+  netscape: "Netscape / cURL cookies.txt.",
+};
+
+const IMPORT_PLACEHOLDER: Record<CookieFormat, string> = {
+  json: '[ { "name": ..., "value": ..., "domain": ... } ]',
+  header: "session=abc; theme=dark",
+  netscape: ".example.com\tTRUE\t/\tFALSE\t0\tname\tvalue",
+};
 
 interface Props {
   session: SessionSummary;
@@ -33,6 +66,13 @@ export default function CookiesView({ session, addToast }: Props) {
   const [origKeys, setOrigKeys] = useState<Record<string, api.CookieKey>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
   const [adding, setAdding] = useState<Draft | null>(null);
+  const [importOpen, importHandlers] = useDisclosure(false);
+  const [importText, setImportText] = useState("");
+  const [importFormat, setImportFormat] = useState<CookieFormat>("json");
+  const [importDomain, setImportDomain] = useState("");
+  const [exportOpen, exportHandlers] = useDisclosure(false);
+  const [exportFormat, setExportFormat] = useState<CookieFormat>("json");
+  const clipboard = useClipboard({ timeout: 1500 });
 
   const load = useCallback(async () => {
     const res = await api.listSessionCookies(session.id);
@@ -105,6 +145,37 @@ export default function CookiesView({ session, addToast }: Props) {
     setAdding(null);
   };
 
+  const exportText = serializeCookies(cookies, exportFormat);
+
+  const openImport = () => {
+    setImportText("");
+    setImportDomain(session.domains[0] ?? "");
+    importHandlers.open();
+  };
+
+  const onImport = async () => {
+    let parsed: CookieDetail[];
+    try {
+      parsed = parseCookies(importText, importFormat, importDomain.trim());
+    } catch {
+      addToast("Couldn't parse cookies", "error");
+      return;
+    }
+    if (parsed.length === 0) {
+      addToast("No cookies to import", "error");
+      return;
+    }
+    const res = await api.importSessionCookies(session.id, parsed);
+    if (!res?.ok) {
+      addToast("Import failed", "error");
+      return;
+    }
+    setCookies(res.cookies ?? []);
+    addToast(`Imported ${res.count} cookies`, "success");
+    importHandlers.close();
+    setImportText("");
+  };
+
   return (
     <Stack gap="xs" py="xs">
       {cookies.length === 0 && !adding && (
@@ -139,17 +210,104 @@ export default function CookiesView({ session, addToast }: Props) {
         )}
       </Stack>
       {!adding && (
-        <Button
-          variant="light"
-          style={{ alignSelf: "flex-start" }}
-          onClick={() => {
-            setAdding(blankDraft(session.domains[0] ?? ""));
-            setExpanded(null);
-          }}
-        >
-          + add cookie
-        </Button>
+        <Group gap="xs">
+          <Button
+            variant="light"
+            onClick={() => {
+              setAdding(blankDraft(session.domains[0] ?? ""));
+              setExpanded(null);
+            }}
+          >
+            + add cookie
+          </Button>
+          <Button variant="light" onClick={openImport}>
+            Import
+          </Button>
+          <Button
+            variant="light"
+            disabled={cookies.length === 0}
+            onClick={exportHandlers.open}
+          >
+            Export
+          </Button>
+        </Group>
       )}
+
+      <Modal
+        opened={importOpen}
+        onClose={importHandlers.close}
+        title="Import cookies"
+        centered
+        size="lg"
+      >
+        <Stack gap="sm">
+          <SegmentedControl
+            size="xs"
+            fullWidth
+            data={FORMAT_DATA}
+            value={importFormat}
+            onChange={(v) => setImportFormat(v as CookieFormat)}
+          />
+          <Text c="dimmed" fz="xs">
+            {FORMAT_LABEL[importFormat]} Cookies merge into this session
+            (existing ones with the same name/domain/path are overwritten).
+          </Text>
+          {importFormat === "header" && (
+            <TextInput
+              size="xs"
+              label="domain"
+              description="Header strings carry no domain; cookies are placed here."
+              value={importDomain}
+              onChange={(e) => setImportDomain(e.currentTarget.value)}
+            />
+          )}
+          <Textarea
+            autosize
+            minRows={6}
+            maxRows={12}
+            placeholder={IMPORT_PLACEHOLDER[importFormat]}
+            value={importText}
+            onChange={(e) => setImportText(e.currentTarget.value)}
+            styles={{ input: { fontFamily: "monospace", fontSize: 12 } }}
+          />
+          <Button disabled={importText.trim() === ""} onClick={onImport}>
+            Import
+          </Button>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={exportOpen}
+        onClose={exportHandlers.close}
+        title={`Export cookies (${cookies.length})`}
+        centered
+        size="lg"
+      >
+        <Stack gap="sm">
+          <SegmentedControl
+            size="xs"
+            fullWidth
+            data={FORMAT_DATA}
+            value={exportFormat}
+            onChange={(v) => setExportFormat(v as CookieFormat)}
+          />
+          <Text c="dimmed" fz="xs">
+            {FORMAT_LABEL[exportFormat]}
+          </Text>
+          <Textarea
+            readOnly
+            autosize
+            minRows={6}
+            maxRows={12}
+            value={exportText}
+            onFocus={(e) => e.currentTarget.select()}
+            styles={{ input: { fontFamily: "monospace", fontSize: 12 } }}
+          />
+          <Button onClick={() => clipboard.copy(exportText)}>
+            {clipboard.copied ? "Copied!" : "Copy"}
+          </Button>
+        </Stack>
+      </Modal>
     </Stack>
   );
 }

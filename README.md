@@ -13,6 +13,9 @@ so you can be logged into the same site as multiple users in different tabs.
 - **HTTP + `document.cookie`** interception — full isolation, not just network
 - **Cookie flush** — pull the current site's real browser cookies into a session,
   or push a session's cookies back out to the real browser (copy, non-destructive)
+- **Import / export cookies** — copy a session's cookies out or merge cookies in,
+  in JSON, header-string, or Netscape format, interchangeable with
+  [Cookie-Editor](https://github.com/moustachauve/cookie-editor)
 - **No accounts, no login, no telemetry**
 
 ## Build
